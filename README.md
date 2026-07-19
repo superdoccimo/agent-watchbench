@@ -95,6 +95,16 @@ python3 agent_watchbench.py secret-scan --root examples/secret-scan-root --outpu
 diff -u examples/secret-scan-report.md /tmp/agent-watchbench-secret-scan.md
 ```
 
+For a release review against a real local checkout, add `--fail-on-findings` so
+the command exits non-zero when possible secrets are found while still redacting
+matched values. Use `--exclude-synthetic-fixtures` after the synthetic fixture
+report and fixture audit have already been regenerated, so intentional
+placeholder examples do not block the repository scan:
+
+```text
+python3 agent_watchbench.py secret-scan --root . --exclude-synthetic-fixtures --fail-on-findings --output /tmp/agent-watchbench-repo-secret-scan.md
+```
+
 The fixture audit gives a concise inventory of checked-in example inputs and
 test fixtures without printing their contents. It separates intentional
 boundary terms in synthetic examples from private-data blockers:

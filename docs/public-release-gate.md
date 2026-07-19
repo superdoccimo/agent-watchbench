@@ -12,7 +12,11 @@ production integration, or social/blog posting.
 - Run a repository secret scan and record the command and result. The local
   prototype includes a synthetic `examples/secret-scan-root` fixture and
   checked-in `examples/secret-scan-report.md` proving that finding locations are
-  reported while secret values are not printed.
+  reported while secret values are not printed. For a real release-candidate
+  checkout, regenerate the synthetic fixture report first, then run
+  `secret-scan --root . --exclude-synthetic-fixtures --fail-on-findings` so
+  possible non-fixture secrets stop the gate with a non-zero exit code while
+  keeping matched values redacted.
 - Confirm checked-in examples and fixtures contain no raw private logs, real
   user data, tokens, credentials, cookies, private keys, OAuth material, or
   private identifiers. The local `fixture-audit` command records a
@@ -35,4 +39,6 @@ production integration, or social/blog posting.
 
 If any gate item fails, keep `superdoccimo/agent-watchbench` private, do not tag
 or release the repository, and open a follow-up issue with the failed item,
-evidence path, and smallest next review step.
+evidence path, and smallest next review step. If `--fail-on-findings` exits
+non-zero after `--exclude-synthetic-fixtures`, preserve only the redacted report
+path and finding count in review notes; do not copy matched values.

@@ -44,6 +44,10 @@ SECRET_KINDS = (
 )
 SKIP_DIRS = {".git", ".hg", ".svn", "__pycache__", ".mypy_cache", ".pytest_cache", ".venv", "venv"}
 SKIP_SUFFIXES = {".pyc", ".png", ".jpg", ".jpeg", ".gif", ".zip", ".tar", ".gz", ".sqlite", ".db"}
+SYNTHETIC_SECRET_FIXTURE_DIRS = (
+    ("examples", "secret-scan-root"),
+    ("tests", "fixtures", "secret-scan-root"),
+)
 
 
 @dataclass(frozen=True)
@@ -272,10 +276,15 @@ def secret_kind(key: str) -> str | None:
     return None
 
 
-def secret_scan(root: Path) -> SecretScanReport:
+def secret_scan(root: Path, exclude_synthetic_fixtures: bool = False) -> SecretScanReport:
     findings: list[SecretFinding] = []
     files_checked = 0
     for path in iter_text_files(root):
+        rel_parts = path.relative_to(root).parts
+        if exclude_synthetic_fixtures and any(
+            rel_parts[: len(fixture_dir)] == fixture_dir for fixture_dir in SYNTHETIC_SECRET_FIXTURE_DIRS
+        ):
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -339,6 +348,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--day")
     parser.add_argument("--output", type=Path, help="Write the Markdown report to a local file.")
+    parser.add_argument(
+        "--fail-on-findings",
+        action="store_true",
+        help="Return a non-zero exit code when secret-scan finds possible secrets.",
+    )
+    parser.add_argument(
+        "--exclude-synthetic-fixtures",
+        action="store_true",
+        help="Exclude Agent Watchbench synthetic secret-scan fixtures from secret-scan.",
+    )
     args = parser.parse_args(argv)
 
     if args.command == "scan":
@@ -347,8 +366,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_report(build_report(args.root, args.day).to_markdown(), args.output)
         return 0
     if args.command == "secret-scan":
-        write_report(secret_scan(args.root).to_markdown(), args.output)
-        return 0
+        report = secret_scan(args.root, exclude_synthetic_fixtures=args.exclude_synthetic_fixtures)
+        write_report(report.to_markdown(), args.output)
+        return 1 if args.fail_on_findings and report.findings else 0
     if args.command == "fixture-audit":
         write_report(fixture_audit(args.root).to_markdown(), args.output)
         return 0
