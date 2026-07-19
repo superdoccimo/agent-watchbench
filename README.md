@@ -64,6 +64,9 @@ evidence, and follow-up guardrails for the private `superdoccimo` repo.
 The public-release gate is tracked in `docs/public-release-gate.md` and must
 pass before any visibility change, tag, release, package publishing, hosted
 service, external scan, production integration, or social/blog posting.
+Current private release-candidate evidence is recorded in
+`docs/release-candidate-evidence.md`; it is evidence for review, not approval
+to release.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 
