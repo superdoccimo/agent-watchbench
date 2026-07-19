@@ -156,12 +156,53 @@ class AgentWatchbenchTests(unittest.TestCase):
         expected = (ROOT / "examples" / "secret-scan-report.md").read_text(encoding="utf-8")
         self.assertEqual(report, expected)
 
+    def test_secret_scan_can_fail_on_findings_without_printing_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "secret-scan.md"
+            with contextlib.redirect_stdout(io.StringIO()) as stdout:
+                status = agent_watchbench.main(
+                    [
+                        "secret-scan",
+                        "--root",
+                        str(FIXTURES / "secret-scan-root"),
+                        "--output",
+                        str(output),
+                        "--fail-on-findings",
+                    ]
+                )
+
+            report = output.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("- findings: 2", report)
+        self.assertNotIn("synthetic_placeholder_value", report)
+
+    def test_secret_scan_fail_on_findings_passes_when_clean(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "note.txt").write_text("synthetic clean fixture\n", encoding="utf-8")
+
+            status = agent_watchbench.main(["secret-scan", "--root", str(root), "--fail-on-findings"])
+
+        self.assertEqual(status, 0)
+
+    def test_secret_scan_can_exclude_synthetic_secret_fixtures(self):
+        report = agent_watchbench.secret_scan(ROOT, exclude_synthetic_fixtures=True).to_markdown()
+
+        self.assertIn("- findings: 0", report)
+        self.assertNotIn("examples/secret-scan-root/.env.sample", report)
+
     def test_readme_and_release_gate_document_secret_scan_fixture(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
 
         self.assertIn("agent_watchbench.py secret-scan", readme)
         self.assertIn("examples/secret-scan-report.md", readme)
+        self.assertIn("--fail-on-findings", readme)
+        self.assertIn("--exclude-synthetic-fixtures", readme)
+        self.assertIn("--fail-on-findings", gate)
+        self.assertIn("--exclude-synthetic-fixtures", gate)
         self.assertIn("secret values are not printed", gate)
         self.assertIn("examples/secret-scan-root", gate)
 
