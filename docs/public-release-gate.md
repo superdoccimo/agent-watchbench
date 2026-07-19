@@ -9,7 +9,10 @@ production integration, or social/blog posting.
 
 ## Checklist
 
-- Run a repository secret scan and record the command and result.
+- Run a repository secret scan and record the command and result. The local
+  prototype includes a synthetic `examples/secret-scan-root` fixture and
+  checked-in `examples/secret-scan-report.md` proving that finding locations are
+  reported while secret values are not printed.
 - Confirm checked-in examples and fixtures contain no raw private logs, real
   user data, tokens, credentials, cookies, private keys, OAuth material, or
   private identifiers.

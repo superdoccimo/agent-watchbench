@@ -84,6 +84,14 @@ python3 agent_watchbench.py scan --root examples/fixture-root --day 2099-01-02 -
 diff -u examples/fixture-report.md /tmp/agent-watchbench-fixture-report.md
 ```
 
+A second synthetic fixture exercises the local repository secret-scan boundary.
+It reports file locations and finding kinds, but does not print matched values:
+
+```text
+python3 agent_watchbench.py secret-scan --root examples/secret-scan-root --output /tmp/agent-watchbench-secret-scan.md
+diff -u examples/secret-scan-report.md /tmp/agent-watchbench-secret-scan.md
+```
+
 The same synthetic fixture gate runs in GitHub Actions on pull requests and
 main pushes. It compiles the prototype, runs unit tests, and checks that the
 checked-in fixture report regenerates exactly from synthetic inputs.

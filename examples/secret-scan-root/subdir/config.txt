@@ -1,0 +1,2 @@
+client_secret: synthetic_placeholder_value
+public_note: fixture only
