@@ -190,6 +190,21 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("examples/fixture-audit-report.md", gate)
         self.assertIn("fixture-audit", workflow)
 
+    def test_release_readiness_index_links_review_evidence_without_approval(self):
+        index = (ROOT / "docs" / "release-readiness-index.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("docs/public-release-gate.md", index)
+        self.assertIn("SAFETY.md", index)
+        self.assertIn("PROVENANCE.md", index)
+        self.assertIn("docs/release-candidate-evidence.md", index)
+        self.assertIn("examples/fixture-report.md", index)
+        self.assertIn("examples/secret-scan-report.md", index)
+        self.assertIn("examples/fixture-audit-report.md", index)
+        self.assertIn("not release approval", index)
+        self.assertIn("Stop and open a follow-up issue", index)
+        self.assertIn("docs/release-readiness-index.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

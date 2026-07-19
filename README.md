@@ -67,6 +67,9 @@ service, external scan, production integration, or social/blog posting.
 Current private release-candidate evidence is recorded in
 `docs/release-candidate-evidence.md`; it is evidence for review, not approval
 to release.
+The release-readiness index at `docs/release-readiness-index.md` links the gate,
+safety note, provenance, release-candidate evidence, and synthetic fixture
+evidence in one review entry point.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 
