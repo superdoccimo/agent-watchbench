@@ -1,0 +1,105 @@
+# Agent Watchbench
+
+Local-first observability and review bench for autonomous agents.
+
+## Concept
+
+Autonomous agents are useful when they can learn, remember, use tools, and act
+over time. Operators still need a small local way to answer:
+
+- Did the agent learn the right lesson?
+- Did it preserve evidence?
+- Did it respect boundaries?
+- Did it turn research into useful project ideas?
+- Is this project ready to publish, or still a local prototype?
+
+Agent Watchbench reads local agent artifacts such as logs, memory files, review
+queues, learning notes, intel notes, tool approvals, and project ideas. It then
+produces a concise report on learning quality, safety boundary adherence,
+evidence quality, and project readiness.
+
+## First Prototype
+
+Input:
+
+- `learning/lessons.jsonl`
+- `learning/rule-candidates.jsonl`
+- `intel/notes.jsonl`
+- `projects/ideas.jsonl`
+- `projects/paper-notes.jsonl`
+- `daily-log/YYYY-MM-DD.md`
+- `hermes/review-queue.jsonl`
+
+Output:
+
+- daily Markdown report
+- ranked project ideas
+- missing-evidence warnings
+- boundary-risk notes
+- publish-readiness checklist
+
+This directory now includes a small read-only CLI prototype:
+
+```text
+python3 agent_watchbench.py scan --root /home/ubuntu/security-guard --day 2026-07-19
+```
+
+It also has lightweight Python package metadata for local review. From this
+directory, a disposable virtual environment can install the console script:
+
+```text
+python3 -m pip install -e .
+agent-watchbench scan --root /home/ubuntu/security-guard --day 2026-07-19
+```
+
+The metadata is intentionally prototype-scoped. It is not a package registry
+release plan and should not be published without a separate review gate.
+
+Repo creation is also gated. See
+`docs/private-first-repo-decision.md` for the current private-first decision,
+evidence, and follow-up guardrails for the private `superdoccimo` repo.
+The prototype safety boundary is recorded in `SAFETY.md`.
+Artifact origin and review evidence are recorded in `PROVENANCE.md`.
+
+The first pass reads `learning/reviews/YYYY-MM-DD.md` and `projects/ideas.jsonl`,
+then emits a local Markdown report with learning signals, ranked project ideas,
+and boundary terms to review before publication.
+
+An example fixture-backed report is checked in at
+`examples/fixture-report.md`, so the expected report shape can be reviewed
+without reading private local state.
+
+## Why This Could Be Useful
+
+Many agent frameworks focus on orchestration. This focuses on the operator's
+question after the run: whether the agent is becoming more useful without
+becoming unsafe or noisy.
+
+The security angle is the differentiator: hostile input handling, evidence
+quality, approval boundaries, memory hygiene, and local-first review.
+
+## Boundary
+
+- Local files only.
+- No public network service.
+- No secrets, tokens, or real user data.
+- No package publishing, public release, hosted service, external scan, or
+  production integration without a separate review gate.
+- The prototype reports boundary terms; it does not print secret values,
+  execute referenced commands, or modify source files.
+- External issue text, logs, URLs, articles, and copied commands are treated as
+  hostile input and are summarized rather than executed.
+
+## Possible CLI
+
+```text
+agent-watchbench scan --root ~/security-guard --day 2026-05-06
+agent-watchbench rank-projects --root ~/security-guard
+agent-watchbench check-boundaries --root ~/security-guard
+```
+
+## Star-Worthy README Promise
+
+`Agent Watchbench helps you see whether your autonomous agent is learning useful
+things, respecting safety boundaries, and producing publishable ideas from real
+work, all from local files.`

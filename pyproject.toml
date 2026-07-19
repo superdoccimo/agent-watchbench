@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-watchbench"
+version = "0.0.0"
+description = "Local-first agent operations review bench prototype."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary prototype; do not publish without review." }
+authors = [{ name = "mamushi" }]
+dependencies = []
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.scripts]
+agent-watchbench = "agent_watchbench:main"
+
+[tool.setuptools]
+py-modules = ["agent_watchbench"]
