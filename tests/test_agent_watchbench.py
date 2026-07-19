@@ -279,6 +279,21 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("repository visibility remains `PRIVATE`", checklist)
         self.assertIn("docs/private-pr-review-checklist.md", readme)
 
+    def test_private_pr_description_template_carries_review_gates(self):
+        template = (ROOT / "docs" / "private-pr-description-template.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Verification", template)
+        self.assertIn("python3 -m unittest discover -s tests -v", template)
+        self.assertIn("fixture-audit", template)
+        self.assertIn("--exclude-synthetic-fixtures --fail-on-findings", template)
+        self.assertIn("Repository visibility confirmed `PRIVATE`", template)
+        self.assertIn("No public visibility change", template)
+        self.assertIn("No package registry publishing", template)
+        self.assertIn("hostile input", template)
+        self.assertIn("Merge only after CI passes", template)
+        self.assertIn("docs/private-pr-description-template.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

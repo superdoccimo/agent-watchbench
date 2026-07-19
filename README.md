@@ -77,6 +77,10 @@ approving a release.
 A private PR checklist is available at `docs/private-pr-review-checklist.md`;
 it keeps quiet-window follow-up PRs scoped to private maintenance and repeats
 the required local, CI, and visibility gates.
+A matching PR description template is available at
+`docs/private-pr-description-template.md` so review packets can carry the same
+verification, boundary, and merge-gate evidence into GitHub without approving a
+public release.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 
