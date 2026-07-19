@@ -22,6 +22,10 @@ class AgentWatchbenchTests(unittest.TestCase):
 
             report = agent_watchbench.build_report(root, "2099-01-02").to_markdown()
 
+        self.assertIn("- learning signals: 2", report)
+        self.assertIn("- ranked project ideas: 2", report)
+        self.assertIn("- boundary notes: 1", report)
+        self.assertIn("- publish readiness: review required", report)
         self.assertIn("fixture passed", report)
         self.assertIn("Agent Watchbench [prototype]: read-only scan report", report)
         self.assertIn("agent-watchbench: review boundary terms", report)
@@ -30,6 +34,7 @@ class AgentWatchbenchTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             report = agent_watchbench.build_report(Path(tmp), "2099-01-02").to_markdown()
 
+        self.assertIn("- publish readiness: no obvious boundary blockers", report)
         self.assertIn("- none found", report)
         self.assertIn("no obvious boundary-risk terms", report)
 

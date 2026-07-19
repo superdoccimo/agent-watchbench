@@ -29,8 +29,15 @@ class WatchbenchReport:
     boundary_notes: list[str]
 
     def to_markdown(self) -> str:
+        publish_status = "review required" if self.boundary_notes else "no obvious boundary blockers"
         lines = [
             f"# Agent Watchbench Report - {self.day}",
+            "",
+            "## Summary",
+            f"- learning signals: {len(self.learning_signals)}",
+            f"- ranked project ideas: {len(self.project_ideas)}",
+            f"- boundary notes: {len(self.boundary_notes)}",
+            f"- publish readiness: {publish_status}",
             "",
             "## Learning Signals",
         ]
