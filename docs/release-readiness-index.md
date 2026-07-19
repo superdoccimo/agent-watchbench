@@ -20,6 +20,10 @@ production integration, credential change, or social/blog post.
 
 ## Current Gate State
 
+- Current candidate commit: `307e4f6fd84324bf567869209a84b7d3a34f7211`
+- Current main CI run:
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29692314708`
+- Current CI result observed: `completed` / `success`
 - Repository visibility stays private until the public-release gate is reviewed
   on a final candidate commit.
 - Checked-in examples are synthetic fixtures only and are reviewed through a

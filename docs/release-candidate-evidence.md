@@ -10,9 +10,9 @@ scan, integrating production, changing credentials/OAuth, or posting socially.
 
 ## Candidate
 
-- Candidate commit: `22d85dbe42d17f45abff65dab36d7ca9437cd477`
-- Source PR: `https://github.com/superdoccimo/agent-watchbench/pull/6`
-- Main CI run: `https://github.com/superdoccimo/agent-watchbench/actions/runs/29684624194`
+- Candidate commit: `307e4f6fd84324bf567869209a84b7d3a34f7211`
+- Source PR: `https://github.com/superdoccimo/agent-watchbench/pull/11`
+- Main CI run: `https://github.com/superdoccimo/agent-watchbench/actions/runs/29692314708`
 - CI result observed: `completed` / `success`
 - Repository visibility observed during the prior merge verification: `PRIVATE`
 
@@ -24,8 +24,11 @@ scan, integrating production, changing credentials/OAuth, or posting socially.
 - The workflow ran `python -m unittest discover -s tests -v`.
 - The workflow regenerated the synthetic fixture report from
   `examples/fixture-root` and diffed it against `examples/fixture-report.md`.
-- Local post-merge verification for the same candidate recorded 10 passing
-  tests, the exact fixture diff, and a clean whitespace diff check.
+- The workflow regenerated the secret-scan and fixture-audit reports from
+  synthetic fixtures and diffed them against the checked-in examples.
+- Local post-merge verification for the same candidate recorded 21 passing
+  tests, fixture diffs, a real checkout secret scan with synthetic fixtures
+  excluded, and a clean diff check.
 
 ## Remaining Release Gate
 
