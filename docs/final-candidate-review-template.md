@@ -10,10 +10,10 @@ credential/OAuth change, or social/blog post.
 
 ## Candidate Under Review
 
-- Final candidate commit: `c3bcce58bd2f4a2a9dc02ad5d723b4c4124170a5`
-- Candidate source PR: `https://github.com/superdoccimo/agent-watchbench/pull/12`
+- Final candidate commit: `71674fc13b1bbf07168fde87573a50de1b70978e`
+- Candidate source PR: `https://github.com/superdoccimo/agent-watchbench/pull/13`
 - Main CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29694254233`
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29696219986`
 - Expected repository visibility before review: `PRIVATE`
 
 ## Required Local Checks
