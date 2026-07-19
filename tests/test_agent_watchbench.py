@@ -264,6 +264,21 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("does not approve", template)
         self.assertIn("Stop and keep the repository private", template)
 
+    def test_private_pr_review_checklist_keeps_quiet_window_followup_gated(self):
+        checklist = (ROOT / "docs" / "private-pr-review-checklist.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("private repository maintenance only", checklist)
+        self.assertIn("Confirm the repository is still `PRIVATE`", checklist)
+        self.assertIn("no existing open issues or pull requests", checklist)
+        self.assertIn("hostile input", checklist)
+        self.assertIn("python3 -m unittest discover -s tests -v", checklist)
+        self.assertIn("--exclude-synthetic-fixtures --fail-on-findings", checklist)
+        self.assertIn("git diff --check", checklist)
+        self.assertIn("Merge only if CI passes", checklist)
+        self.assertIn("repository visibility remains `PRIVATE`", checklist)
+        self.assertIn("docs/private-pr-review-checklist.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

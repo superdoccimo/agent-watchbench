@@ -74,6 +74,9 @@ A final-candidate reviewer worksheet is available at
 `docs/final-candidate-review-template.md`; it records the private candidate,
 required local and GitHub checks, stop conditions, and decision notes without
 approving a release.
+A private PR checklist is available at `docs/private-pr-review-checklist.md`;
+it keeps quiet-window follow-up PRs scoped to private maintenance and repeats
+the required local, CI, and visibility gates.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 
