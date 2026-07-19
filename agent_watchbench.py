@@ -20,6 +20,15 @@ RISK_WORDS = (
     "external publish",
     "production change",
 )
+PRIVATE_FIXTURE_BLOCKERS = (
+    "raw private log",
+    "real user data",
+    "private identifier",
+    "private key",
+    "oauth",
+    "cookie",
+    "credential",
+)
 
 ASSIGNMENT_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)\s*[:=]\s*(['\"]?)([^'\"\s#]{8,})\2")
 SECRET_KINDS = (
@@ -111,6 +120,49 @@ class SecretScanReport:
                 f"- {finding.path}:{finding.line} [{finding.kind}] value redacted"
                 for finding in self.findings
             )
+        else:
+            lines.append("- none found")
+        return "\n".join(lines) + "\n"
+
+
+@dataclass(frozen=True)
+class FixtureAuditItem:
+    path: str
+    synthetic_marker: bool
+    boundary_terms: list[str]
+    private_blockers: list[str]
+
+
+@dataclass(frozen=True)
+class FixtureAuditReport:
+    root: Path
+    files_checked: int
+    items: list[FixtureAuditItem]
+
+    def to_markdown(self) -> str:
+        review_items = [item for item in self.items if not item.synthetic_marker or item.boundary_terms]
+        lines = [
+            "# Agent Watchbench Fixture Audit",
+            "",
+            "## Summary",
+            f"- root: {self.root}",
+            f"- files checked: {self.files_checked}",
+            f"- files with synthetic marker: {sum(1 for item in self.items if item.synthetic_marker)}",
+            f"- files needing boundary review: {len(review_items)}",
+            f"- files with private-data blockers: {sum(1 for item in self.items if item.private_blockers)}",
+            "- audit scope: examples/ and tests/fixtures/ only",
+            "- value policy: fixture contents are not printed",
+            "",
+            "## Files",
+        ]
+        if self.items:
+            for item in self.items:
+                marker = "synthetic marker present" if item.synthetic_marker else "synthetic marker missing"
+                boundary = ", ".join(item.boundary_terms) if item.boundary_terms else "no boundary terms"
+                blockers = (
+                    ", ".join(item.private_blockers) if item.private_blockers else "no private-data blockers"
+                )
+                lines.append(f"- {item.path}: {marker}; {boundary}; {blockers}")
         else:
             lines.append("- none found")
         return "\n".join(lines) + "\n"
@@ -241,6 +293,38 @@ def secret_scan(root: Path) -> SecretScanReport:
     return SecretScanReport(root=root, files_checked=files_checked, findings=findings)
 
 
+def fixture_audit(root: Path) -> FixtureAuditReport:
+    items: list[FixtureAuditItem] = []
+    files_checked = 0
+    fixture_roots = [root / "examples", root / "tests" / "fixtures"]
+    for fixture_root in fixture_roots:
+        if not fixture_root.exists():
+            continue
+        for path in iter_text_files(fixture_root):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            files_checked += 1
+            lowered = text.lower()
+            rel_path = path.relative_to(root).as_posix()
+            if rel_path == "examples/fixture-audit-report.md":
+                files_checked -= 1
+                continue
+            synthetic_marker = any(marker in lowered for marker in ("synthetic", "fixture", "placeholder"))
+            boundary_terms_found = [term for term in RISK_WORDS if term in lowered]
+            private_blockers = [term for term in PRIVATE_FIXTURE_BLOCKERS if term in lowered]
+            items.append(
+                FixtureAuditItem(
+                    path=rel_path,
+                    synthetic_marker=synthetic_marker,
+                    boundary_terms=boundary_terms_found,
+                    private_blockers=private_blockers,
+                )
+            )
+    return FixtureAuditReport(root=root, files_checked=files_checked, items=sorted(items, key=lambda item: item.path))
+
+
 def write_report(markdown: str, output: Path | None) -> None:
     if output is None:
         print(markdown, end="")
@@ -251,7 +335,7 @@ def write_report(markdown: str, output: Path | None) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a local Agent Watchbench report.")
-    parser.add_argument("command", choices=["scan", "secret-scan"])
+    parser.add_argument("command", choices=["scan", "secret-scan", "fixture-audit"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--day")
     parser.add_argument("--output", type=Path, help="Write the Markdown report to a local file.")
@@ -264,6 +348,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "secret-scan":
         write_report(secret_scan(args.root).to_markdown(), args.output)
+        return 0
+    if args.command == "fixture-audit":
+        write_report(fixture_audit(args.root).to_markdown(), args.output)
         return 0
     raise AssertionError(args.command)
 

@@ -92,9 +92,18 @@ python3 agent_watchbench.py secret-scan --root examples/secret-scan-root --outpu
 diff -u examples/secret-scan-report.md /tmp/agent-watchbench-secret-scan.md
 ```
 
+The fixture audit gives a concise inventory of checked-in example inputs and
+test fixtures without printing their contents. It separates intentional
+boundary terms in synthetic examples from private-data blockers:
+
+```text
+python3 agent_watchbench.py fixture-audit --root . --output /tmp/agent-watchbench-fixture-audit.md
+diff -u examples/fixture-audit-report.md /tmp/agent-watchbench-fixture-audit.md
+```
+
 The same synthetic fixture gate runs in GitHub Actions on pull requests and
 main pushes. It compiles the prototype, runs unit tests, and checks that the
-checked-in fixture report regenerates exactly from synthetic inputs.
+checked-in fixture reports regenerate exactly from synthetic inputs.
 
 ## Why This Could Be Useful
 
