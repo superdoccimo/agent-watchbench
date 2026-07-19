@@ -23,7 +23,7 @@ external input.
 
 ## Review Status
 
-Current state: private-first repository candidate. The readiness pass before
-private repo creation reruns unit tests, generates a real local scan report,
-confirms examples remain synthetic-only, and keeps package metadata scoped to
-local editable installs.
+Current state: private-first repository. Issue #1 tracks the explicit
+public-release gate, and `docs/public-release-gate.md` records the checklist
+that must pass before any visibility change, tag, release, package publishing,
+hosted service, external scan, production integration, or social/blog posting.
