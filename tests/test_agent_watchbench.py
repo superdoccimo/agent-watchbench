@@ -54,6 +54,12 @@ class AgentWatchbenchTests(unittest.TestCase):
             self.assertTrue(output.exists())
             self.assertIn("# Agent Watchbench Report - 2099-01-02", output.read_text(encoding="utf-8"))
 
+    def test_checked_in_fixture_root_regenerates_example_report(self):
+        report = agent_watchbench.build_report(ROOT / "examples" / "fixture-root", "2099-01-02").to_markdown()
+
+        expected = (ROOT / "examples" / "fixture-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+
     def test_pyproject_exposes_local_console_script(self):
         metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
