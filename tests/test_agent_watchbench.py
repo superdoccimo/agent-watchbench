@@ -115,6 +115,19 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("docs/public-release-gate.md", safety)
         self.assertIn("Issue #1 tracks", provenance)
 
+    def test_ci_workflow_runs_readonly_fixture_gate(self):
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
+
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn("python -m py_compile agent_watchbench.py", workflow)
+        self.assertIn("python -m unittest discover -s tests -v", workflow)
+        self.assertIn("--root examples/fixture-root", workflow)
+        self.assertIn("diff -u examples/fixture-report.md", workflow)
+        self.assertIn("GitHub Actions", readme)
+        self.assertIn("GitHub Actions fixture gate passes", gate)
+
 
 if __name__ == "__main__":
     unittest.main()

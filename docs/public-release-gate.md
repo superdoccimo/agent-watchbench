@@ -18,6 +18,8 @@ production integration, or social/blog posting.
   executed.
 - Run unit tests or a fixture-backed scan locally and record the passing
   evidence.
+- Confirm the GitHub Actions fixture gate passes on the release-candidate
+  commit, including the synthetic fixture report diff.
 - Keep package registry publishing, hosted service deployment, external
   scanning, production integration, and social/blog posting out of scope unless
   each action is separately approved.

@@ -81,6 +81,10 @@ python3 agent_watchbench.py scan --root examples/fixture-root --day 2099-01-02 -
 diff -u examples/fixture-report.md /tmp/agent-watchbench-fixture-report.md
 ```
 
+The same synthetic fixture gate runs in GitHub Actions on pull requests and
+main pushes. It compiles the prototype, runs unit tests, and checks that the
+checked-in fixture report regenerates exactly from synthetic inputs.
+
 ## Why This Could Be Useful
 
 Many agent frameworks focus on orchestration. This focuses on the operator's
