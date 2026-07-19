@@ -2,7 +2,6 @@ from pathlib import Path
 import contextlib
 import io
 import shutil
-import tomllib
 import tempfile
 import unittest
 
@@ -61,11 +60,12 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertEqual(report, expected)
 
     def test_pyproject_exposes_local_console_script(self):
-        metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-        self.assertEqual(metadata["project"]["name"], "agent-watchbench")
-        self.assertEqual(metadata["project"]["scripts"]["agent-watchbench"], "agent_watchbench:main")
-        self.assertEqual(metadata["tool"]["setuptools"]["py-modules"], ["agent_watchbench"])
+        self.assertIn('name = "agent-watchbench"', metadata)
+        self.assertIn('requires-python = ">=3.10"', metadata)
+        self.assertIn('agent-watchbench = "agent_watchbench:main"', metadata)
+        self.assertIn('py-modules = ["agent_watchbench"]', metadata)
 
     def test_private_first_decision_keeps_repo_creation_gated(self):
         decision = (ROOT / "docs" / "private-first-repo-decision.md").read_text(encoding="utf-8")
