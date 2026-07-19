@@ -81,6 +81,10 @@ A matching PR description template is available at
 `docs/private-pr-description-template.md` so review packets can carry the same
 verification, boundary, and merge-gate evidence into GitHub without approving a
 public release.
+The quiet-window private PR draft packet is recorded at
+`docs/private-pr-open-packet.md`; it gives the next private branch push a ready
+summary, verification list, boundary statement, and merge gate without doing an
+external GitHub write.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 

@@ -294,6 +294,22 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("Merge only after CI passes", template)
         self.assertIn("docs/private-pr-description-template.md", readme)
 
+    def test_private_pr_open_packet_records_next_private_pr_without_release_approval(self):
+        packet = (ROOT / "docs" / "private-pr-open-packet.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("mamushi/release-evidence-current-candidate", packet)
+        self.assertIn("51d496d", packet)
+        self.assertIn("a005a01", packet)
+        self.assertIn("50b6574", packet)
+        self.assertIn("Repository visibility confirmed `PRIVATE`", packet)
+        self.assertIn("No public visibility change", packet)
+        self.assertIn("package registry", packet)
+        self.assertIn("hostile input", packet)
+        self.assertIn("Merge only after CI passes", packet)
+        self.assertIn("does not approve", packet)
+        self.assertIn("docs/private-pr-open-packet.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
