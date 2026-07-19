@@ -142,6 +142,29 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("repository secret scan", evidence)
         self.assertIn("docs/release-candidate-evidence.md", readme)
 
+    def test_secret_scan_reports_locations_without_values(self):
+        report = agent_watchbench.secret_scan(FIXTURES / "secret-scan-root").to_markdown()
+
+        self.assertIn("- findings: 2", report)
+        self.assertIn("- .env.sample:1 [token] value redacted", report)
+        self.assertIn("- subdir/config.txt:1 [client-secret] value redacted", report)
+        self.assertNotIn("synthetic_placeholder_value", report)
+
+    def test_checked_in_secret_scan_fixture_report_regenerates(self):
+        report = agent_watchbench.secret_scan(Path("examples/secret-scan-root")).to_markdown()
+
+        expected = (ROOT / "examples" / "secret-scan-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+
+    def test_readme_and_release_gate_document_secret_scan_fixture(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
+
+        self.assertIn("agent_watchbench.py secret-scan", readme)
+        self.assertIn("examples/secret-scan-report.md", readme)
+        self.assertIn("secret values are not printed", gate)
+        self.assertIn("examples/secret-scan-root", gate)
+
 
 if __name__ == "__main__":
     unittest.main()

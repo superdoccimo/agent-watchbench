@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -19,6 +20,21 @@ RISK_WORDS = (
     "external publish",
     "production change",
 )
+
+ASSIGNMENT_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)\s*[:=]\s*(['\"]?)([^'\"\s#]{8,})\2")
+SECRET_KINDS = (
+    ("api-key", "apikey"),
+    ("access-token", "accesstoken"),
+    ("auth-token", "authtoken"),
+    ("client-secret", "clientsecret"),
+    ("private-key", "privatekey"),
+    ("credential", "credential"),
+    ("password", "password"),
+    ("secret", "secret"),
+    ("token", "token"),
+)
+SKIP_DIRS = {".git", ".hg", ".svn", "__pycache__", ".mypy_cache", ".pytest_cache", ".venv", "venv"}
+SKIP_SUFFIXES = {".pyc", ".png", ".jpg", ".jpeg", ".gif", ".zip", ".tar", ".gz", ".sqlite", ".db"}
 
 
 @dataclass(frozen=True)
@@ -62,6 +78,41 @@ class WatchbenchReport:
         else:
             lines.append("- no obvious boundary-risk terms in project idea metadata")
 
+        return "\n".join(lines) + "\n"
+
+
+@dataclass(frozen=True)
+class SecretFinding:
+    path: str
+    line: int
+    kind: str
+
+
+@dataclass(frozen=True)
+class SecretScanReport:
+    root: Path
+    files_checked: int
+    findings: list[SecretFinding]
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# Agent Watchbench Repository Secret Scan",
+            "",
+            "## Summary",
+            f"- root: {self.root}",
+            f"- files checked: {self.files_checked}",
+            f"- findings: {len(self.findings)}",
+            "- value policy: secret values are not printed",
+            "",
+            "## Findings",
+        ]
+        if self.findings:
+            lines.extend(
+                f"- {finding.path}:{finding.line} [{finding.kind}] value redacted"
+                for finding in self.findings
+            )
+        else:
+            lines.append("- none found")
         return "\n".join(lines) + "\n"
 
 
@@ -143,6 +194,53 @@ def build_report(root: Path, day: str) -> WatchbenchReport:
     )
 
 
+def iter_text_files(root: Path) -> Iterable[Path]:
+    pending = [root]
+    while pending:
+        current = pending.pop(0)
+        for path in sorted(current.iterdir()):
+            if path.is_dir():
+                if path.name not in SKIP_DIRS:
+                    pending.append(path)
+                continue
+            if not path.is_file():
+                continue
+            if any(part in SKIP_DIRS for part in path.relative_to(root).parts):
+                continue
+            if path.suffix.lower() in SKIP_SUFFIXES:
+                continue
+            yield path
+
+
+def secret_kind(key: str) -> str | None:
+    normalized = re.sub(r"[^a-z0-9]", "", key.lower())
+    for kind, marker in SECRET_KINDS:
+        if marker in normalized:
+            return kind
+    return None
+
+
+def secret_scan(root: Path) -> SecretScanReport:
+    findings: list[SecretFinding] = []
+    files_checked = 0
+    for path in iter_text_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        files_checked += 1
+        rel_path = path.relative_to(root).as_posix()
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            assignment = ASSIGNMENT_RE.match(line)
+            if not assignment:
+                continue
+            kind = secret_kind(assignment.group(1))
+            if not kind:
+                continue
+            findings.append(SecretFinding(rel_path, line_no, kind))
+    return SecretScanReport(root=root, files_checked=files_checked, findings=findings)
+
+
 def write_report(markdown: str, output: Path | None) -> None:
     if output is None:
         print(markdown, end="")
@@ -153,14 +251,19 @@ def write_report(markdown: str, output: Path | None) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a local Agent Watchbench report.")
-    parser.add_argument("command", choices=["scan"])
+    parser.add_argument("command", choices=["scan", "secret-scan"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
-    parser.add_argument("--day", required=True)
+    parser.add_argument("--day")
     parser.add_argument("--output", type=Path, help="Write the Markdown report to a local file.")
     args = parser.parse_args(argv)
 
     if args.command == "scan":
+        if not args.day:
+            parser.error("--day is required for scan")
         write_report(build_report(args.root, args.day).to_markdown(), args.output)
+        return 0
+    if args.command == "secret-scan":
+        write_report(secret_scan(args.root).to_markdown(), args.output)
         return 0
     raise AssertionError(args.command)
 
