@@ -18,6 +18,9 @@ private log publication, or social/blog post.
   - `51d496d` refreshes release-candidate evidence.
   - `a005a01` adds the private PR review checklist.
   - `50b6574` adds the private PR description template.
+- Packet hardening commits:
+  - `39bb58e` adds this private PR open packet.
+  - `fbb241b` adds the local private PR packet audit gate.
 
 ## Pull Request Draft
 
@@ -26,6 +29,7 @@ private log publication, or social/blog post.
 
 - Refreshes the private release-candidate evidence path for Agent Watchbench.
 - Adds reusable private PR review and description templates.
+- Adds a local private PR packet audit gate for required safety markers.
 - Keeps the work scoped to private repository maintenance.
 
 ## Verification
@@ -38,6 +42,8 @@ private log publication, or social/blog post.
 - [ ] `diff -u examples/secret-scan-report.md /tmp/agent-watchbench-secret-scan.md`
 - [ ] `python3 agent_watchbench.py fixture-audit --root . --output /tmp/agent-watchbench-fixture-audit.md`
 - [ ] `diff -u examples/fixture-audit-report.md /tmp/agent-watchbench-fixture-audit.md`
+- [ ] `python3 agent_watchbench.py pr-packet-audit --root . --fail-on-missing --output /tmp/agent-watchbench-pr-packet-audit.md`
+- [ ] `diff -u examples/private-pr-packet-audit-report.md /tmp/agent-watchbench-pr-packet-audit.md`
 - [ ] `python3 agent_watchbench.py secret-scan --root . --exclude-synthetic-fixtures --fail-on-findings`
 - [ ] `git diff --check`
 - [ ] GitHub Actions passed on this private PR
