@@ -74,6 +74,12 @@ and boundary terms to review before publication.
 An example fixture-backed report is checked in at
 `examples/fixture-report.md`, so the expected report shape can be reviewed
 without reading private local state.
+To regenerate that example from synthetic inputs only:
+
+```text
+python3 agent_watchbench.py scan --root examples/fixture-root --day 2099-01-02 --output /tmp/agent-watchbench-fixture-report.md
+diff -u examples/fixture-report.md /tmp/agent-watchbench-fixture-report.md
+```
 
 ## Why This Could Be Useful
 
