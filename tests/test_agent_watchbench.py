@@ -128,6 +128,20 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("GitHub Actions", readme)
         self.assertIn("GitHub Actions fixture gate passes", gate)
 
+    def test_release_candidate_evidence_consumes_passing_ci_without_approval(self):
+        evidence = (ROOT / "docs" / "release-candidate-evidence.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("22d85dbe42d17f45abff65dab36d7ca9437cd477", evidence)
+        self.assertIn("actions/runs/29684624194", evidence)
+        self.assertIn("completed` / `success", evidence)
+        self.assertIn("contents: read", evidence)
+        self.assertIn("python -m unittest discover -s tests -v", evidence)
+        self.assertIn("examples/fixture-root", evidence)
+        self.assertIn("not a release approval", evidence)
+        self.assertIn("repository secret scan", evidence)
+        self.assertIn("docs/release-candidate-evidence.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
