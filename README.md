@@ -58,6 +58,9 @@ release plan and should not be published without a separate review gate.
 Repo creation is also gated. See
 `docs/private-first-repo-decision.md` for the current private-first decision,
 evidence, and follow-up guardrails for the private `superdoccimo` repo.
+The public-release gate is tracked in `docs/public-release-gate.md` and must
+pass before any visibility change, tag, release, package publishing, hosted
+service, external scan, production integration, or social/blog posting.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 

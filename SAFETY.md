@@ -20,6 +20,8 @@ only the report text the operator requests.
 
 ## Review Gate
 
-Before creating a private `superdoccimo/agent-watchbench` repo, re-run the unit
-tests, generate a real local scan report, review examples for synthetic-only
-data, and record provenance for the heartbeat work that created the artifact.
+Before public visibility, a tag, release, package registry publishing, hosted
+service, external scan, production integration, or social/blog posting, complete
+`docs/public-release-gate.md`. If any gate item fails, keep the repository
+private and open a follow-up issue with the failed item, evidence path, and
+smallest next review step.

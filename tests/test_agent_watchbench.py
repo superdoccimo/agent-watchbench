@@ -71,6 +71,23 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("PROVENANCE.md", readme)
         self.assertIn("Safety and provenance notes are linked", decision)
 
+    def test_public_release_gate_documents_issue_one_boundary(self):
+        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
+        safety = (ROOT / "SAFETY.md").read_text(encoding="utf-8")
+        provenance = (ROOT / "PROVENANCE.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("Agent Watchbench stays private", gate)
+        self.assertIn("repository secret scan", gate)
+        self.assertIn("no raw private logs", gate)
+        self.assertIn("commands copied from external input", gate)
+        self.assertIn("fixture-backed scan", gate)
+        self.assertIn("separately approved", gate)
+        self.assertIn("keep `superdoccimo/agent-watchbench` private", gate)
+        self.assertIn("docs/public-release-gate.md", readme)
+        self.assertIn("docs/public-release-gate.md", safety)
+        self.assertIn("Issue #1 tracks", provenance)
+
 
 if __name__ == "__main__":
     unittest.main()
