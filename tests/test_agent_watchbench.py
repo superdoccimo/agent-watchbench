@@ -310,6 +310,32 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("does not approve", packet)
         self.assertIn("docs/private-pr-open-packet.md", readme)
 
+    def test_private_pr_packet_audit_reports_required_markers_without_copying_packet(self):
+        report = agent_watchbench.private_pr_packet_audit(Path(".")).to_markdown()
+
+        expected = (ROOT / "examples" / "private-pr-packet-audit-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+        self.assertNotIn("Refreshes the private release-candidate evidence path", report)
+
+    def test_private_pr_packet_audit_can_fail_on_missing_markers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            packet = root / "packet.md"
+            packet.write_text("PRIVATE only\n", encoding="utf-8")
+
+            status = agent_watchbench.main(
+                ["pr-packet-audit", "--root", str(root), "--packet", str(packet), "--fail-on-missing"]
+            )
+
+        self.assertEqual(status, 1)
+
+    def test_readme_documents_private_pr_packet_audit_gate(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("pr-packet-audit", readme)
+        self.assertIn("--fail-on-missing", readme)
+        self.assertIn("examples/private-pr-packet-audit-report.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -172,6 +172,59 @@ class FixtureAuditReport:
         return "\n".join(lines) + "\n"
 
 
+PR_PACKET_MARKERS = (
+    ("private visibility gate", "Repository visibility confirmed `PRIVATE`"),
+    ("no public release action", "No public visibility change"),
+    ("package registry boundary", "package registry"),
+    ("hostile input boundary", "hostile input"),
+    ("ci merge gate", "Merge only after CI passes"),
+    ("release approval separation", "does not approve"),
+    ("github actions check", "GitHub Actions passed"),
+    ("real checkout secret scan", "--exclude-synthetic-fixtures --fail-on-findings"),
+)
+
+
+@dataclass(frozen=True)
+class PrivatePrPacketAuditReport:
+    packet_path: Path
+    markers_checked: int
+    missing_markers: list[str]
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# Agent Watchbench Private PR Packet Audit",
+            "",
+            "## Summary",
+            f"- packet: {self.packet_path}",
+            f"- markers checked: {self.markers_checked}",
+            f"- missing markers: {len(self.missing_markers)}",
+            "- value policy: packet text is not copied into this report",
+            "",
+            "## Missing Markers",
+        ]
+        if self.missing_markers:
+            lines.extend(f"- {marker}" for marker in self.missing_markers)
+        else:
+            lines.append("- none found")
+        return "\n".join(lines) + "\n"
+
+
+def private_pr_packet_audit(root: Path, packet: Path | None = None) -> PrivatePrPacketAuditReport:
+    packet_path = packet or root / "docs" / "private-pr-open-packet.md"
+    if not packet_path.is_absolute():
+        packet_path = root / packet_path
+    try:
+        text = packet_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        text = ""
+    missing = [label for label, marker in PR_PACKET_MARKERS if marker not in text]
+    return PrivatePrPacketAuditReport(
+        packet_path=packet_path,
+        markers_checked=len(PR_PACKET_MARKERS),
+        missing_markers=missing,
+    )
+
+
 def read_jsonl(path: Path) -> list[dict]:
     if not path.exists():
         return []
@@ -344,14 +397,24 @@ def write_report(markdown: str, output: Path | None) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a local Agent Watchbench report.")
-    parser.add_argument("command", choices=["scan", "secret-scan", "fixture-audit"])
+    parser.add_argument("command", choices=["scan", "secret-scan", "fixture-audit", "pr-packet-audit"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--day")
     parser.add_argument("--output", type=Path, help="Write the Markdown report to a local file.")
     parser.add_argument(
+        "--packet",
+        type=Path,
+        help="Private PR packet to audit. Defaults to docs/private-pr-open-packet.md under --root.",
+    )
+    parser.add_argument(
         "--fail-on-findings",
         action="store_true",
         help="Return a non-zero exit code when secret-scan finds possible secrets.",
+    )
+    parser.add_argument(
+        "--fail-on-missing",
+        action="store_true",
+        help="Return a non-zero exit code when pr-packet-audit finds missing markers.",
     )
     parser.add_argument(
         "--exclude-synthetic-fixtures",
@@ -372,6 +435,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "fixture-audit":
         write_report(fixture_audit(args.root).to_markdown(), args.output)
         return 0
+    if args.command == "pr-packet-audit":
+        report = private_pr_packet_audit(args.root, args.packet)
+        write_report(report.to_markdown(), args.output)
+        return 1 if args.fail_on_missing and report.missing_markers else 0
     raise AssertionError(args.command)
 
 
