@@ -70,6 +70,10 @@ to release.
 The release-readiness index at `docs/release-readiness-index.md` links the gate,
 safety note, provenance, release-candidate evidence, and synthetic fixture
 evidence in one review entry point.
+A final-candidate reviewer worksheet is available at
+`docs/final-candidate-review-template.md`; it records the private candidate,
+required local and GitHub checks, stop conditions, and decision notes without
+approving a release.
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 
