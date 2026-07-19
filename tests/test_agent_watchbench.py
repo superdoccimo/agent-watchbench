@@ -240,14 +240,31 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("SAFETY.md", index)
         self.assertIn("PROVENANCE.md", index)
         self.assertIn("docs/release-candidate-evidence.md", index)
+        self.assertIn("docs/final-candidate-review-template.md", index)
         self.assertIn("examples/fixture-report.md", index)
         self.assertIn("examples/secret-scan-report.md", index)
         self.assertIn("examples/fixture-audit-report.md", index)
         self.assertIn("307e4f6fd84324bf567869209a84b7d3a34f7211", index)
         self.assertIn("actions/runs/29692314708", index)
+        self.assertIn("c3bcce58bd2f4a2a9dc02ad5d723b4c4124170a5", index)
+        self.assertIn("actions/runs/29694254233", index)
         self.assertIn("not release approval", index)
         self.assertIn("Stop and open a follow-up issue", index)
         self.assertIn("docs/release-readiness-index.md", readme)
+        self.assertIn("docs/final-candidate-review-template.md", readme)
+
+    def test_final_candidate_review_template_keeps_release_decision_separate(self):
+        template = (ROOT / "docs" / "final-candidate-review-template.md").read_text(encoding="utf-8")
+
+        self.assertIn("c3bcce58bd2f4a2a9dc02ad5d723b4c4124170a5", template)
+        self.assertIn("actions/runs/29694254233", template)
+        self.assertIn("Expected repository visibility before review: `PRIVATE`", template)
+        self.assertIn("python3 -m unittest discover -s tests -v", template)
+        self.assertIn("--fail-on-findings", template)
+        self.assertIn("Confirm the repository is still private", template)
+        self.assertIn("Candidate is ready for a separate public-release decision", template)
+        self.assertIn("does not approve", template)
+        self.assertIn("Stop and keep the repository private", template)
 
 
 if __name__ == "__main__":
