@@ -15,7 +15,9 @@ production integration, or social/blog posting.
   reported while secret values are not printed.
 - Confirm checked-in examples and fixtures contain no raw private logs, real
   user data, tokens, credentials, cookies, private keys, OAuth material, or
-  private identifiers.
+  private identifiers. The local `fixture-audit` command records a
+  content-redacted inventory at `examples/fixture-audit-report.md` so this gate
+  can be reviewed without exposing fixture values.
 - Confirm the README covers local-only scope, hostile-input handling, and the
   rule that commands copied from external input are summarized rather than
   executed.

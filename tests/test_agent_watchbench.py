@@ -165,6 +165,31 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("secret values are not printed", gate)
         self.assertIn("examples/secret-scan-root", gate)
 
+    def test_fixture_audit_reports_inventory_without_contents(self):
+        report = agent_watchbench.fixture_audit(ROOT).to_markdown()
+
+        self.assertIn("- audit scope: examples/ and tests/fixtures/ only", report)
+        self.assertIn("- files with private-data blockers: 0", report)
+        self.assertIn("examples/secret-scan-root/.env.sample", report)
+        self.assertIn("no private-data blockers", report)
+        self.assertNotIn("synthetic_placeholder_value", report)
+
+    def test_checked_in_fixture_audit_report_regenerates(self):
+        report = agent_watchbench.fixture_audit(Path(".")).to_markdown()
+
+        expected = (ROOT / "examples" / "fixture-audit-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+
+    def test_readme_release_gate_and_ci_document_fixture_audit(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+        self.assertIn("fixture-audit", readme)
+        self.assertIn("examples/fixture-audit-report.md", readme)
+        self.assertIn("examples/fixture-audit-report.md", gate)
+        self.assertIn("fixture-audit", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

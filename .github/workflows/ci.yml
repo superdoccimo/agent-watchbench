@@ -42,3 +42,17 @@ jobs:
             --day 2099-01-02 \
             --output /tmp/agent-watchbench-fixture-report.md
           diff -u examples/fixture-report.md /tmp/agent-watchbench-fixture-report.md
+
+      - name: Verify synthetic secret-scan fixture report
+        run: |
+          python agent_watchbench.py secret-scan \
+            --root examples/secret-scan-root \
+            --output /tmp/agent-watchbench-secret-scan-report.md
+          diff -u examples/secret-scan-report.md /tmp/agent-watchbench-secret-scan-report.md
+
+      - name: Verify fixture audit report
+        run: |
+          python agent_watchbench.py fixture-audit \
+            --root . \
+            --output /tmp/agent-watchbench-fixture-audit-report.md
+          diff -u examples/fixture-audit-report.md /tmp/agent-watchbench-fixture-audit-report.md
