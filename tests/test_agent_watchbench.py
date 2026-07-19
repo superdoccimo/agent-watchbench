@@ -1,4 +1,6 @@
 from pathlib import Path
+import contextlib
+import io
 import shutil
 import tomllib
 import tempfile
@@ -37,6 +39,20 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("- publish readiness: no obvious boundary blockers", report)
         self.assertIn("- none found", report)
         self.assertIn("no obvious boundary-risk terms", report)
+
+    def test_scan_can_write_report_to_local_output_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / "reports" / "watchbench.md"
+            with contextlib.redirect_stdout(io.StringIO()) as stdout:
+                status = agent_watchbench.main(
+                    ["scan", "--root", str(root), "--day", "2099-01-02", "--output", str(output)]
+                )
+
+            self.assertEqual(status, 0)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertTrue(output.exists())
+            self.assertIn("# Agent Watchbench Report - 2099-01-02", output.read_text(encoding="utf-8"))
 
     def test_pyproject_exposes_local_console_script(self):
         metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))

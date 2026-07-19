@@ -44,6 +44,9 @@ This directory now includes a small read-only CLI prototype:
 python3 agent_watchbench.py scan --root /home/ubuntu/security-guard --day 2026-07-19
 ```
 
+Use `--output reports/watchbench-2026-07-19.md` to save the Markdown report as a
+local review artifact instead of printing it to stdout.
+
 It also has lightweight Python package metadata for local review. From this
 directory, a disposable virtual environment can install the console script:
 

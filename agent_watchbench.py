@@ -7,7 +7,7 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 
 RISK_WORDS = (
@@ -143,15 +143,24 @@ def build_report(root: Path, day: str) -> WatchbenchReport:
     )
 
 
-def main() -> int:
+def write_report(markdown: str, output: Path | None) -> None:
+    if output is None:
+        print(markdown, end="")
+        return
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(markdown, encoding="utf-8")
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a local Agent Watchbench report.")
     parser.add_argument("command", choices=["scan"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--day", required=True)
-    args = parser.parse_args()
+    parser.add_argument("--output", type=Path, help="Write the Markdown report to a local file.")
+    args = parser.parse_args(argv)
 
     if args.command == "scan":
-        print(build_report(args.root, args.day).to_markdown(), end="")
+        write_report(build_report(args.root, args.day).to_markdown(), args.output)
         return 0
     raise AssertionError(args.command)
 
