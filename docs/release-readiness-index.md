@@ -21,13 +21,13 @@ production integration, credential change, or social/blog post.
 
 ## Current Gate State
 
-- Current candidate commit: `71674fc13b1bbf07168fde87573a50de1b70978e`
+- Current candidate commit: `a40470368d4569fd4da6a284de56357c82bd164c`
 - Current main CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29696219986`
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29708990144`
 - Final-candidate review template target commit:
-  `71674fc13b1bbf07168fde87573a50de1b70978e`
+  `a40470368d4569fd4da6a284de56357c82bd164c`
 - Final-candidate review template CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29696219986`
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29708990144`
 - Current CI result observed: `completed` / `success`
 - Repository visibility stays private until the public-release gate is reviewed
   on a final candidate commit.
