@@ -360,6 +360,13 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("--fail-on-missing", readme)
         self.assertIn("examples/private-pr-packet-audit-report.md", readme)
 
+    def test_ci_runs_private_pr_packet_audit_fixture_gate(self):
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+        self.assertIn("pr-packet-audit", workflow)
+        self.assertIn("--fail-on-missing", workflow)
+        self.assertIn("examples/private-pr-packet-audit-report.md", workflow)
+
     def test_release_index_audit_reports_required_markers_without_copying_index(self):
         report = agent_watchbench.release_index_audit(Path(".")).to_markdown()
 
