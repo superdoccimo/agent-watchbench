@@ -132,8 +132,8 @@ class AgentWatchbenchTests(unittest.TestCase):
         evidence = (ROOT / "docs" / "release-candidate-evidence.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertIn("71674fc13b1bbf07168fde87573a50de1b70978e", evidence)
-        self.assertIn("actions/runs/29696219986", evidence)
+        self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", evidence)
+        self.assertIn("actions/runs/29708990144", evidence)
         self.assertIn("completed` / `success", evidence)
         self.assertIn("contents: read", evidence)
         self.assertIn("python -m unittest discover -s tests -v", evidence)
@@ -244,8 +244,8 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("examples/fixture-report.md", index)
         self.assertIn("examples/secret-scan-report.md", index)
         self.assertIn("examples/fixture-audit-report.md", index)
-        self.assertIn("71674fc13b1bbf07168fde87573a50de1b70978e", index)
-        self.assertIn("actions/runs/29696219986", index)
+        self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", index)
+        self.assertIn("actions/runs/29708990144", index)
         self.assertIn("not release approval", index)
         self.assertIn("Stop and open a follow-up issue", index)
         self.assertIn("docs/release-readiness-index.md", readme)
@@ -254,8 +254,8 @@ class AgentWatchbenchTests(unittest.TestCase):
     def test_final_candidate_review_template_keeps_release_decision_separate(self):
         template = (ROOT / "docs" / "final-candidate-review-template.md").read_text(encoding="utf-8")
 
-        self.assertIn("71674fc13b1bbf07168fde87573a50de1b70978e", template)
-        self.assertIn("actions/runs/29696219986", template)
+        self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", template)
+        self.assertIn("actions/runs/29708990144", template)
         self.assertIn("Expected repository visibility before review: `PRIVATE`", template)
         self.assertIn("python3 -m unittest discover -s tests -v", template)
         self.assertIn("--fail-on-findings", template)
