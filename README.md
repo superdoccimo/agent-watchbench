@@ -114,6 +114,10 @@ python3 agent_watchbench.py release-sync-audit --root . --candidate 9cf57ed97490
 diff -u examples/release-sync-audit-report.md /tmp/agent-watchbench-release-sync-audit.md
 ```
 
+The `--candidate` marker is intentionally a single token, such as a commit SHA
+or short local marker, so whitespace-only input cannot accidentally make the
+sync audit pass.
+
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 

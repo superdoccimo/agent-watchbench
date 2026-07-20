@@ -197,6 +197,15 @@ RELEASE_INDEX_MARKERS = (
 )
 
 
+def normalize_candidate_marker(candidate: str) -> str:
+    marker = candidate.strip()
+    if not marker:
+        raise ValueError("candidate marker must not be empty")
+    if any(character.isspace() for character in marker):
+        raise ValueError("candidate marker must be a single token without whitespace")
+    return marker
+
+
 @dataclass(frozen=True)
 class PrivatePrPacketAuditReport:
     packet_path: Path
@@ -313,6 +322,7 @@ def release_index_audit(root: Path, index: Path | None = None) -> ReleaseIndexAu
 
 
 def release_sync_audit(root: Path, candidate: str, files: Sequence[Path] | None = None) -> ReleaseSyncAuditReport:
+    candidate = normalize_candidate_marker(candidate)
     default_files = (
         Path("docs/release-readiness-index.md"),
         Path("docs/final-candidate-review-2026-07-20.md"),
@@ -590,7 +600,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "release-sync-audit":
         if not args.candidate:
             parser.error("--candidate is required for release-sync-audit")
-        report = release_sync_audit(args.root, args.candidate, args.release_doc)
+        try:
+            report = release_sync_audit(args.root, args.candidate, args.release_doc)
+        except ValueError as exc:
+            parser.error(str(exc))
         write_report(report.to_markdown(), args.output)
         return 1 if args.fail_on_stale and report.stale_files else 0
     raise AssertionError(args.command)
