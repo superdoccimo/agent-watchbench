@@ -19,6 +19,21 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def windows_short_path(path: Path) -> Path:
+    if os.name != "nt":
+        raise OSError("Windows short paths are unavailable")
+    import ctypes
+
+    get_short_path = ctypes.windll.kernel32.GetShortPathNameW
+    get_short_path.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint]
+    get_short_path.restype = ctypes.c_uint
+    buffer = ctypes.create_unicode_buffer(32_768)
+    result = get_short_path(str(path), buffer, len(buffer))
+    if result == 0 or result >= len(buffer):
+        raise OSError("Windows short path could not be resolved")
+    return Path(buffer.value)
+
+
 class AgentWatchbenchTests(unittest.TestCase):
     def populate_scan_root(self, root: Path) -> None:
         (root / "learning" / "reviews").mkdir(parents=True)
@@ -180,6 +195,60 @@ class AgentWatchbenchTests(unittest.TestCase):
                             agent_watchbench.main(
                                 ["scan", "--root", str(root), "--day", "2099-01-02", "--output", str(output)]
                             )
+
+    @unittest.skipUnless(os.name == "nt", "Windows path aliases are Windows-specific")
+    def test_windows_case_variants_are_canonicalized_before_containment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = agent_watchbench.validate_root(Path(tmp))
+            target = root / "candidate.md"
+            target.write_text("synthetic\n", encoding="utf-8")
+            case_variant = Path(str(target).swapcase())
+
+            confined = agent_watchbench.confined_path(root, case_variant, case_variant)
+
+        self.assertEqual(confined, agent_watchbench.canonical_path(target))
+
+    @unittest.skipUnless(os.name == "nt", "Windows 8.3 paths are Windows-specific")
+    def test_windows_short_and_long_paths_share_one_canonical_identity(self):
+        with tempfile.TemporaryDirectory(prefix="watchbench long path ") as tmp:
+            long_root = agent_watchbench.validate_root(Path(tmp))
+            short_root = windows_short_path(long_root)
+            if str(short_root).casefold() == str(long_root).casefold():
+                self.skipTest("8.3 aliases are disabled on this volume")
+            target = long_root / "candidate.md"
+            target.write_text("synthetic\n", encoding="utf-8")
+            short_target = short_root / target.name
+
+            self.assertEqual(agent_watchbench.validate_root(short_root), long_root)
+            self.assertEqual(
+                agent_watchbench.confined_path(long_root, short_target, short_target),
+                target,
+            )
+            with self.assertRaisesRegex(ValueError, "local-reports"):
+                agent_watchbench.validate_output(long_root, short_root / "README.md", False)
+            self.assertEqual(
+                agent_watchbench.validate_output(
+                    long_root,
+                    short_root / "local-reports" / "report.md",
+                    False,
+                ),
+                long_root / "local-reports" / "report.md",
+            )
+            with tempfile.TemporaryDirectory() as outside_tmp:
+                outside = Path(outside_tmp) / "outside.md"
+                outside.write_text("synthetic\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "inside root"):
+                    agent_watchbench.confined_path(long_root, outside, outside)
+
+    def test_windows_reparse_points_are_treated_as_link_like(self):
+        class ReparsePoint:
+            def is_symlink(self) -> bool:
+                return False
+
+            def lstat(self):
+                return type("Stat", (), {"st_file_attributes": 0x400})()
+
+        self.assertTrue(agent_watchbench.path_is_link_like(ReparsePoint()))
 
     def test_output_symlink_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -528,6 +597,8 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read", workflow)
         self.assertIn("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0", workflow)
         self.assertIn("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97", workflow)
+        self.assertIn("python -m pip install setuptools==80.9.0", workflow)
+        self.assertIn("python -m pip install --no-deps --no-build-isolation -e .", workflow)
         self.assertIn("ubuntu-latest", workflow)
         self.assertIn("windows-latest", workflow)
         for version in range(10, 15):

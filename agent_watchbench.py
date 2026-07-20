@@ -378,11 +378,35 @@ def normalize_candidate_marker(candidate: str) -> str:
     return candidate
 
 
+def canonical_path(path: Path, strict: bool = False) -> Path:
+    """Return an absolute filesystem identity suitable for containment checks."""
+    absolute = Path(os.path.abspath(path))
+    if os.name == "nt":
+        # realpath expands Windows 8.3 aliases and resolves reparse-point targets.
+        return Path(os.path.realpath(absolute, strict=strict))
+    return absolute.resolve(strict=strict)
+
+
+def path_is_link_like(path: Path) -> bool:
+    """Treat symlinks and Windows reparse points, including junctions, as links."""
+    try:
+        if path.is_symlink():
+            return True
+        attributes = getattr(path.lstat(), "st_file_attributes", 0)
+        reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        return bool(attributes & reparse_point)
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+
+
 def validate_root(root: Path) -> Path:
     try:
-        if root.is_symlink():
-            raise ValueError("root must not be a symlink")
-        resolved = root.resolve(strict=True)
+        lexical = Path(os.path.abspath(root))
+        if path_is_link_like(lexical):
+            raise ValueError("root must not be a symlink or junction")
+        resolved = canonical_path(lexical, strict=True)
     except FileNotFoundError as exc:
         raise ValueError("root must exist") from exc
     except OSError as exc:
@@ -410,7 +434,7 @@ def has_symlink_component(path: Path, root: Path) -> bool:
     for part in path.relative_to(root).parts:
         current = current / part
         try:
-            if current.is_symlink():
+            if path_is_link_like(current):
                 return True
         except OSError:
             return True
@@ -425,7 +449,7 @@ def path_uses_symlink(path: Path) -> bool:
     for part in absolute.parts[1:]:
         current = current / part
         try:
-            if current.is_symlink():
+            if path_is_link_like(current):
                 return True
         except OSError:
             return True
@@ -441,11 +465,12 @@ def confined_path(root: Path, supplied: Path | None, default: Path) -> Path:
     if not candidate.is_absolute():
         candidate = root / candidate
     lexical = Path(os.path.abspath(candidate))
-    if not is_within(lexical, root):
+    if path_uses_symlink(lexical):
+        raise ValueError("audit input must not use symlinks or junctions")
+    canonical = canonical_path(lexical)
+    if not is_within(canonical, root):
         raise ValueError("audit input must remain inside root")
-    if has_symlink_component(lexical, root):
-        raise ValueError("audit input must not use symlinks")
-    return lexical
+    return canonical
 
 
 def safe_read_text(path: Path, root: Path) -> tuple[str | None, ScanError | None]:
@@ -497,7 +522,7 @@ def iter_candidate_files(root: Path) -> tuple[list[Path], list[ScanError]]:
         for path in entries:
             label = path_label(path, root)
             try:
-                if path.is_symlink():
+                if path_is_link_like(path):
                     errors.append(ScanError(label, "symlink"))
                     continue
                 if path.is_dir():
@@ -645,7 +670,7 @@ def secret_scan(
     excluded_paths: Sequence[Path] = (),
 ) -> SecretScanReport:
     root = validate_root(root)
-    excluded = {Path(os.path.abspath(path)) for path in excluded_paths}
+    excluded = {canonical_path(path) for path in excluded_paths}
     findings: list[SecretFinding] = []
     files_checked = 0
     files, scan_errors = iter_candidate_files(root)
@@ -784,24 +809,25 @@ def validate_output(root: Path, output: Path | None, force: bool) -> Path | None
     if not output.is_absolute():
         output = Path.cwd() / output
     lexical = Path(os.path.abspath(output))
-    if is_within(lexical, root):
-        allowed = root / "local-reports"
-        if not is_within(lexical, allowed):
-            raise ValueError("outputs inside root must stay under local-reports")
     if path_uses_symlink(lexical):
-        raise ValueError("output must not use symlinks")
-    if lexical.exists():
-        if lexical.is_symlink() or not lexical.is_file():
+        raise ValueError("output must not use symlinks or junctions")
+    canonical = canonical_path(lexical)
+    if is_within(canonical, root):
+        allowed = root / "local-reports"
+        if not is_within(canonical, allowed):
+            raise ValueError("outputs inside root must stay under local-reports")
+    if canonical.exists():
+        if path_is_link_like(canonical) or not canonical.is_file():
             raise ValueError("output must be a regular file")
         if not force:
             raise ValueError("output already exists; use --force to replace a report")
-    return lexical
+    return canonical
 
 
 def reject_output_input_collision(output: Path | None, inputs: Iterable[Path]) -> None:
     if output is None:
         return
-    if any(Path(os.path.abspath(path)) == output for path in inputs):
+    if any(canonical_path(path) == output for path in inputs):
         raise ValueError("output must not replace an audit input")
 
 
