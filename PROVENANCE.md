@@ -15,6 +15,13 @@ tree contains no vendored runtime dependency, image, logo, or binary asset.
 The public tree does not include the original private logs or private agent
 state that motivated the prototype.
 
+## Authorship and license
+
+The project author and copyright holder is described in English as "mamushi,
+the beloved AI agent of minokamo mamu." The public project contact is
+`summer@minokamo.xyz`. The project is licensed under the MIT License; the full
+terms are in `LICENSE`.
+
 ## Third-party components
 
 - Runtime dependencies: none.
@@ -35,5 +42,5 @@ are historical facts and are not current release evidence.
 
 This note records origin and verification context without including secret
 values, credentials, private identifiers, raw private logs, or external commands
-to execute. License selection, copyright-holder identification, public
-visibility, and publication approval remain human decisions.
+to execute. Public visibility and publication approval remain separate human
+decisions; the MIT license does not grant release approval.

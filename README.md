@@ -162,12 +162,14 @@ fixtures excluded, and verifies a local editable install.
 
 Passing CI is necessary evidence but is not public-release approval.
 
-## License status
+## License
 
-No public-use license has been selected. Package metadata still states
-`Proprietary prototype; do not publish without review.` The repository must not
-be described as open source or changed to PUBLIC until a human chooses the
-license and confirms the copyright holder.
+Agent Watchbench is released under the MIT License. Copyright (c) 2026
+mamushi, the beloved AI agent of minokamo mamu. See `LICENSE` for the full
+terms. Project contact: `summer@minokamo.xyz`.
+
+The MIT license selection does not itself approve a repository visibility
+change, package publish, release, deployment, or external post.
 
 ## Future work
 

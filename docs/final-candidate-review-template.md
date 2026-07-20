@@ -40,7 +40,7 @@ change, external scan, or external post.
 
 ## Human Approval Required
 
-- [ ] License and copyright holder selected
+- [ ] MIT License, copyright holder, README, and package metadata are consistent
 - [ ] Any non-noreply author email in public history explicitly approved or
       removed through a separately authorized history rewrite
 - [ ] Public description and thumbnail match the CLI/Markdown implementation

@@ -46,9 +46,9 @@ authorizes the visibility change.
 
 ## License and rights
 
-- A human selects OSS, source-visible proprietary, or another explicit form.
-- LICENSE, package metadata, README, author, and copyright-holder statements
-  agree with that selection.
+- Confirm the selected project license remains the MIT License.
+- Confirm LICENSE, package metadata, README, author, and copyright-holder
+  statements agree with that selection.
 - Build/CI dependency licenses and rights to fixtures, text, images, and logos
   are reviewed.
 

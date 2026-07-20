@@ -31,10 +31,10 @@ after the candidate exists and checked with `release-sync-audit`.
 
 ## Human Approval Required
 
-CI and local evidence do not approve publication. A human must choose the
-license and copyright holder, approve or remediate personal commit metadata,
-confirm that public descriptions and images are accurate, and authorize the
-visibility change separately.
+CI and local evidence do not approve publication. A human must verify that the
+selected MIT License, copyright holder, and package metadata remain consistent,
+approve or remediate personal commit metadata, confirm that public descriptions
+and images are accurate, and authorize the visibility change separately.
 
 ## Stop Conditions
 

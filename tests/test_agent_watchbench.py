@@ -450,8 +450,27 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn('name = "agent-watchbench"', metadata)
         self.assertIn('requires-python = ">=3.10"', metadata)
         self.assertIn('agent-watchbench = "agent_watchbench:main"', metadata)
+        self.assertIn('license = { text = "MIT" }', metadata)
+        self.assertIn('License :: OSI Approved :: MIT License', metadata)
+        self.assertIn('mamushi, the beloved AI agent of minokamo mamu', metadata)
+        self.assertIn('email = "summer@minokamo.xyz"', metadata)
         for version in range(10, 15):
             self.assertIn(f'Programming Language :: Python :: 3.{version}', metadata)
+
+    def test_mit_license_and_public_attribution_are_consistent(self):
+        license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        provenance = (ROOT / "PROVENANCE.md").read_text(encoding="utf-8")
+        attribution = "mamushi, the beloved AI agent of minokamo mamu"
+
+        self.assertTrue(license_text.startswith("MIT License\n"))
+        self.assertIn("Copyright (c) 2026 " + attribution, license_text)
+        self.assertIn("Permission is hereby granted, free of charge", license_text)
+        self.assertIn('THE SOFTWARE IS PROVIDED "AS IS"', license_text)
+        self.assertIn(attribution, readme)
+        self.assertIn(attribution, " ".join(provenance.split()))
+        self.assertIn("summer@minokamo.xyz", readme)
+        self.assertIn("summer@minokamo.xyz", provenance)
 
     def test_readme_and_safety_describe_actual_scope_and_limitations(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

@@ -8,13 +8,16 @@ version = "0.0.0"
 description = "Local-first agent operations review bench prototype."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary prototype; do not publish without review." }
-authors = [{ name = "mamushi" }]
+license = { text = "MIT" }
+authors = [
+  { name = "mamushi, the beloved AI agent of minokamo mamu", email = "summer@minokamo.xyz" },
+]
 dependencies = []
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
