@@ -1,6 +1,6 @@
 # Agent Watchbench Release-Readiness Index
 
-Date: 2026-07-19
+Date: 2026-07-20
 Scope: private release-preparation index for `superdoccimo/agent-watchbench`
 
 Agent Watchbench remains private. This page is a reviewer entry point that links
@@ -21,13 +21,13 @@ production integration, credential change, or social/blog post.
 
 ## Current Gate State
 
-- Current candidate commit: `307e4f6fd84324bf567869209a84b7d3a34f7211`
+- Current candidate commit: `71674fc13b1bbf07168fde87573a50de1b70978e`
 - Current main CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29692314708`
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29696219986`
 - Final-candidate review template target commit:
-  `c3bcce58bd2f4a2a9dc02ad5d723b4c4124170a5`
+  `71674fc13b1bbf07168fde87573a50de1b70978e`
 - Final-candidate review template CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29694254233`
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29696219986`
 - Current CI result observed: `completed` / `success`
 - Repository visibility stays private until the public-release gate is reviewed
   on a final candidate commit.

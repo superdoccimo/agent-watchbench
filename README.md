@@ -74,6 +74,25 @@ A final-candidate reviewer worksheet is available at
 `docs/final-candidate-review-template.md`; it records the private candidate,
 required local and GitHub checks, stop conditions, and decision notes without
 approving a release.
+A private PR checklist is available at `docs/private-pr-review-checklist.md`;
+it keeps quiet-window follow-up PRs scoped to private maintenance and repeats
+the required local, CI, and visibility gates.
+A matching PR description template is available at
+`docs/private-pr-description-template.md` so review packets can carry the same
+verification, boundary, and merge-gate evidence into GitHub without approving a
+public release.
+The quiet-window private PR draft packet is recorded at
+`docs/private-pr-open-packet.md`; it gives the next private branch push a ready
+summary, verification list, boundary statement, and merge gate without doing an
+external GitHub write.
+Before opening that private PR, the packet can be audited locally for required
+private-visibility, CI, hostile-input, and release-boundary markers:
+
+```text
+python3 agent_watchbench.py pr-packet-audit --root . --fail-on-missing --output /tmp/agent-watchbench-pr-packet-audit.md
+diff -u examples/private-pr-packet-audit-report.md /tmp/agent-watchbench-pr-packet-audit.md
+```
+
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 

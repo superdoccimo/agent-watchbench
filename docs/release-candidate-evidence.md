@@ -1,6 +1,6 @@
 # Agent Watchbench Release-Candidate Evidence
 
-Date: 2026-07-19
+Date: 2026-07-20
 Scope: private release-preparation evidence for `superdoccimo/agent-watchbench`
 
 Agent Watchbench remains private. This note records the current release-candidate
@@ -10,9 +10,9 @@ scan, integrating production, changing credentials/OAuth, or posting socially.
 
 ## Candidate
 
-- Candidate commit: `307e4f6fd84324bf567869209a84b7d3a34f7211`
-- Source PR: `https://github.com/superdoccimo/agent-watchbench/pull/11`
-- Main CI run: `https://github.com/superdoccimo/agent-watchbench/actions/runs/29692314708`
+- Candidate commit: `71674fc13b1bbf07168fde87573a50de1b70978e`
+- Source PR: `https://github.com/superdoccimo/agent-watchbench/pull/13`
+- Main CI run: `https://github.com/superdoccimo/agent-watchbench/actions/runs/29696219986`
 - CI result observed: `completed` / `success`
 - Repository visibility observed during the prior merge verification: `PRIVATE`
 
@@ -26,7 +26,7 @@ scan, integrating production, changing credentials/OAuth, or posting socially.
   `examples/fixture-root` and diffed it against `examples/fixture-report.md`.
 - The workflow regenerated the secret-scan and fixture-audit reports from
   synthetic fixtures and diffed them against the checked-in examples.
-- Local post-merge verification for the same candidate recorded 21 passing
+- Local post-merge verification for the same candidate recorded 22 passing
   tests, fixture diffs, a real checkout secret scan with synthetic fixtures
   excluded, and a clean diff check.
 

@@ -132,8 +132,8 @@ class AgentWatchbenchTests(unittest.TestCase):
         evidence = (ROOT / "docs" / "release-candidate-evidence.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertIn("307e4f6fd84324bf567869209a84b7d3a34f7211", evidence)
-        self.assertIn("actions/runs/29692314708", evidence)
+        self.assertIn("71674fc13b1bbf07168fde87573a50de1b70978e", evidence)
+        self.assertIn("actions/runs/29696219986", evidence)
         self.assertIn("completed` / `success", evidence)
         self.assertIn("contents: read", evidence)
         self.assertIn("python -m unittest discover -s tests -v", evidence)
@@ -244,10 +244,8 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("examples/fixture-report.md", index)
         self.assertIn("examples/secret-scan-report.md", index)
         self.assertIn("examples/fixture-audit-report.md", index)
-        self.assertIn("307e4f6fd84324bf567869209a84b7d3a34f7211", index)
-        self.assertIn("actions/runs/29692314708", index)
-        self.assertIn("c3bcce58bd2f4a2a9dc02ad5d723b4c4124170a5", index)
-        self.assertIn("actions/runs/29694254233", index)
+        self.assertIn("71674fc13b1bbf07168fde87573a50de1b70978e", index)
+        self.assertIn("actions/runs/29696219986", index)
         self.assertIn("not release approval", index)
         self.assertIn("Stop and open a follow-up issue", index)
         self.assertIn("docs/release-readiness-index.md", readme)
@@ -256,8 +254,8 @@ class AgentWatchbenchTests(unittest.TestCase):
     def test_final_candidate_review_template_keeps_release_decision_separate(self):
         template = (ROOT / "docs" / "final-candidate-review-template.md").read_text(encoding="utf-8")
 
-        self.assertIn("c3bcce58bd2f4a2a9dc02ad5d723b4c4124170a5", template)
-        self.assertIn("actions/runs/29694254233", template)
+        self.assertIn("71674fc13b1bbf07168fde87573a50de1b70978e", template)
+        self.assertIn("actions/runs/29696219986", template)
         self.assertIn("Expected repository visibility before review: `PRIVATE`", template)
         self.assertIn("python3 -m unittest discover -s tests -v", template)
         self.assertIn("--fail-on-findings", template)
@@ -265,6 +263,82 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("Candidate is ready for a separate public-release decision", template)
         self.assertIn("does not approve", template)
         self.assertIn("Stop and keep the repository private", template)
+
+    def test_private_pr_review_checklist_keeps_quiet_window_followup_gated(self):
+        checklist = (ROOT / "docs" / "private-pr-review-checklist.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("private repository maintenance only", checklist)
+        self.assertIn("Confirm the repository is still `PRIVATE`", checklist)
+        self.assertIn("no existing open issues or pull requests", checklist)
+        self.assertIn("hostile input", checklist)
+        self.assertIn("python3 -m unittest discover -s tests -v", checklist)
+        self.assertIn("--exclude-synthetic-fixtures --fail-on-findings", checklist)
+        self.assertIn("git diff --check", checklist)
+        self.assertIn("Merge only if CI passes", checklist)
+        self.assertIn("repository visibility remains `PRIVATE`", checklist)
+        self.assertIn("docs/private-pr-review-checklist.md", readme)
+
+    def test_private_pr_description_template_carries_review_gates(self):
+        template = (ROOT / "docs" / "private-pr-description-template.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Verification", template)
+        self.assertIn("python3 -m unittest discover -s tests -v", template)
+        self.assertIn("fixture-audit", template)
+        self.assertIn("--exclude-synthetic-fixtures --fail-on-findings", template)
+        self.assertIn("Repository visibility confirmed `PRIVATE`", template)
+        self.assertIn("No public visibility change", template)
+        self.assertIn("No package registry publishing", template)
+        self.assertIn("hostile input", template)
+        self.assertIn("Merge only after CI passes", template)
+        self.assertIn("docs/private-pr-description-template.md", readme)
+
+    def test_private_pr_open_packet_records_next_private_pr_without_release_approval(self):
+        packet = (ROOT / "docs" / "private-pr-open-packet.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("mamushi/release-evidence-current-candidate", packet)
+        self.assertIn("51d496d", packet)
+        self.assertIn("a005a01", packet)
+        self.assertIn("50b6574", packet)
+        self.assertIn("39bb58e", packet)
+        self.assertIn("fbb241b", packet)
+        self.assertIn("private PR packet audit gate", packet)
+        self.assertIn("examples/private-pr-packet-audit-report.md", packet)
+        self.assertIn("Repository visibility confirmed `PRIVATE`", packet)
+        self.assertIn("No public visibility change", packet)
+        self.assertIn("package registry", packet)
+        self.assertIn("hostile input", packet)
+        self.assertIn("Merge only after CI passes", packet)
+        self.assertIn("does not approve", packet)
+        self.assertIn("docs/private-pr-open-packet.md", readme)
+
+    def test_private_pr_packet_audit_reports_required_markers_without_copying_packet(self):
+        report = agent_watchbench.private_pr_packet_audit(Path(".")).to_markdown()
+
+        expected = (ROOT / "examples" / "private-pr-packet-audit-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+        self.assertNotIn("Refreshes the private release-candidate evidence path", report)
+
+    def test_private_pr_packet_audit_can_fail_on_missing_markers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            packet = root / "packet.md"
+            packet.write_text("PRIVATE only\n", encoding="utf-8")
+
+            status = agent_watchbench.main(
+                ["pr-packet-audit", "--root", str(root), "--packet", str(packet), "--fail-on-missing"]
+            )
+
+        self.assertEqual(status, 1)
+
+    def test_readme_documents_private_pr_packet_audit_gate(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("pr-packet-audit", readme)
+        self.assertIn("--fail-on-missing", readme)
+        self.assertIn("examples/private-pr-packet-audit-report.md", readme)
 
 
 if __name__ == "__main__":
