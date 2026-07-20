@@ -241,11 +241,14 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("PROVENANCE.md", index)
         self.assertIn("docs/release-candidate-evidence.md", index)
         self.assertIn("docs/final-candidate-review-template.md", index)
+        self.assertIn("docs/final-candidate-review-2026-07-20.md", index)
         self.assertIn("examples/fixture-report.md", index)
         self.assertIn("examples/secret-scan-report.md", index)
         self.assertIn("examples/fixture-audit-report.md", index)
         self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", index)
         self.assertIn("actions/runs/29708990144", index)
+        self.assertIn("9cf57ed974903fbe210f392f73c6b6f1ac7f7895", index)
+        self.assertIn("actions/runs/29710509162", index)
         self.assertIn("not release approval", index)
         self.assertIn("Stop and open a follow-up issue", index)
         self.assertIn("docs/release-readiness-index.md", readme)
@@ -263,6 +266,23 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("Candidate is ready for a separate public-release decision", template)
         self.assertIn("does not approve", template)
         self.assertIn("Stop and keep the repository private", template)
+
+    def test_filled_final_candidate_review_records_current_private_candidate(self):
+        review = (ROOT / "docs" / "final-candidate-review-2026-07-20.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("9cf57ed974903fbe210f392f73c6b6f1ac7f7895", review)
+        self.assertIn("actions/runs/29710509162", review)
+        self.assertIn("Repository visibility observed before review: `PRIVATE`", review)
+        self.assertIn("Open release-blocking issues observed before review: none", review)
+        self.assertIn("Open pull requests observed before review: none", review)
+        self.assertIn("python3 -m unittest discover -s tests -v", review)
+        self.assertIn("examples/private-pr-packet-audit-report.md", review)
+        self.assertIn("--fail-on-findings", review)
+        self.assertIn("Candidate is ready for a separate public-release decision", review)
+        self.assertIn("public-release approval gate is still separate", review)
+        self.assertIn("did not change repository visibility", review)
+        self.assertIn("docs/final-candidate-review-2026-07-20.md", readme)
 
     def test_private_pr_review_checklist_keeps_quiet_window_followup_gated(self):
         checklist = (ROOT / "docs" / "private-pr-review-checklist.md").read_text(encoding="utf-8")

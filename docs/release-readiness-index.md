@@ -15,6 +15,7 @@ production integration, credential change, or social/blog post.
 - Provenance: `PROVENANCE.md`
 - Release-candidate evidence: `docs/release-candidate-evidence.md`
 - Final-candidate review template: `docs/final-candidate-review-template.md`
+- Filled final-candidate review: `docs/final-candidate-review-2026-07-20.md`
 - Synthetic fixture report: `examples/fixture-report.md`
 - Synthetic secret-scan report: `examples/secret-scan-report.md`
 - Content-redacted fixture audit: `examples/fixture-audit-report.md`
@@ -28,6 +29,10 @@ production integration, credential change, or social/blog post.
   `a40470368d4569fd4da6a284de56357c82bd164c`
 - Final-candidate review template CI run:
   `https://github.com/superdoccimo/agent-watchbench/actions/runs/29708990144`
+- Filled final-candidate review target commit:
+  `9cf57ed974903fbe210f392f73c6b6f1ac7f7895`
+- Filled final-candidate review CI run:
+  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29710509162`
 - Current CI result observed: `completed` / `success`
 - Repository visibility stays private until the public-release gate is reviewed
   on a final candidate commit.
