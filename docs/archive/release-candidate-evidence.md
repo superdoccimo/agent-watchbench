@@ -1,3 +1,8 @@
+# Historical document — not current release evidence
+
+The candidate SHA, pull request, CI run, and verification claims below describe
+an earlier review only. They are not current release approval.
+
 # Agent Watchbench Release-Candidate Evidence
 
 Date: 2026-07-20

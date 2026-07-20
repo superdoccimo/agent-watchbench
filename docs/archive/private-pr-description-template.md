@@ -1,3 +1,8 @@
+# Historical document — not current release evidence
+
+This private-PR template is archived for provenance. It is not the active
+public-release workflow and does not approve a visibility change.
+
 # Agent Watchbench Private PR Description Template
 
 Use this template for private `superdoccimo/agent-watchbench` pull requests.
@@ -7,7 +12,7 @@ gates that must be checked before merge.
 ```markdown
 ## Summary
 
-- 
+-
 
 ## Verification
 

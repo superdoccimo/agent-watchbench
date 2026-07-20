@@ -1,3 +1,8 @@
+# Historical document — not current release evidence
+
+This filled worksheet records an earlier private candidate. It is retained for
+provenance and must not be used as the current candidate decision.
+
 # Agent Watchbench Final-Candidate Review - 2026-07-20
 
 Date: 2026-07-20

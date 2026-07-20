@@ -1,3 +1,8 @@
+# Historical document — not current release evidence
+
+This checklist is retained as historical private-repository process evidence.
+It is not the active public-release checklist.
+
 # Agent Watchbench Private PR Review Checklist
 
 Use this checklist when opening or reviewing a private

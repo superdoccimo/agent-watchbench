@@ -10,66 +10,107 @@ permissions:
   contents: read
 
 jobs:
-  fixture-gate:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+  verification:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
         python-version:
           - "3.10"
+          - "3.11"
           - "3.12"
+          - "3.13"
+          - "3.14"
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Compile prototype
-        run: python -m py_compile agent_watchbench.py
+      - name: Compile source and tests
+        run: python -m py_compile agent_watchbench.py tests/test_agent_watchbench.py
 
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Verify synthetic fixture report
+      - name: Verify checked-in synthetic reports
+        shell: pwsh
         run: |
-          python agent_watchbench.py scan \
-            --root examples/fixture-root \
-            --day 2099-01-02 \
-            --output /tmp/agent-watchbench-fixture-report.md
-          diff -u examples/fixture-report.md /tmp/agent-watchbench-fixture-report.md
+          $checks = @(
+            @{
+              Name = "fixture-report"
+              Expected = "examples/fixture-report.md"
+              Args = @("scan", "--root", "examples/fixture-root", "--day", "2099-01-02")
+            },
+            @{
+              Name = "secret-scan-report"
+              Expected = "examples/secret-scan-report.md"
+              Args = @("secret-scan", "--root", "examples/secret-scan-root")
+            },
+            @{
+              Name = "fixture-audit-report"
+              Expected = "examples/fixture-audit-report.md"
+              Args = @("fixture-audit", "--root", ".")
+            },
+            @{
+              Name = "private-pr-packet-audit-report"
+              Expected = "examples/private-pr-packet-audit-report.md"
+              Args = @("pr-packet-audit", "--root", ".", "--fail-on-missing")
+            },
+            @{
+              Name = "release-index-audit-report"
+              Expected = "examples/release-index-audit-report.md"
+              Args = @("release-index-audit", "--root", ".", "--fail-on-missing")
+            },
+            @{
+              Name = "release-sync-audit-report"
+              Expected = "examples/release-sync-audit-report.md"
+              Args = @(
+                "release-sync-audit",
+                "--root", "examples/release-sync-root",
+                "--candidate", "synthetic-candidate-commit",
+                "--release-doc", "candidate-review.md",
+                "--fail-on-stale"
+              )
+            }
+          )
+          foreach ($check in $checks) {
+            $actual = Join-Path $env:RUNNER_TEMP ($check.Name + ".md")
+            python agent_watchbench.py @($check.Args) --output $actual
+            if ($LASTEXITCODE -ne 0) {
+              throw "Report generation failed: $($check.Name)"
+            }
+            git diff --no-index --exit-code -- $check.Expected $actual
+            if ($LASTEXITCODE -ne 0) {
+              throw "Checked-in report is stale: $($check.Name)"
+            }
+          }
 
-      - name: Verify synthetic secret-scan fixture report
+      - name: Scan checkout without synthetic secret fixtures
+        shell: pwsh
         run: |
-          python agent_watchbench.py secret-scan \
-            --root examples/secret-scan-root \
-            --output /tmp/agent-watchbench-secret-scan-report.md
-          diff -u examples/secret-scan-report.md /tmp/agent-watchbench-secret-scan-report.md
+          $report = Join-Path $env:RUNNER_TEMP "repository-secret-scan.md"
+          python agent_watchbench.py secret-scan `
+            --root . `
+            --exclude-synthetic-fixtures `
+            --fail-on-findings `
+            --output $report
+          if ($LASTEXITCODE -ne 0) {
+            throw "Repository secret scan found a possible secret or incomplete scan"
+          }
 
-      - name: Verify fixture audit report
+      - name: Verify local editable install and CLI
         run: |
-          python agent_watchbench.py fixture-audit \
-            --root . \
-            --output /tmp/agent-watchbench-fixture-audit-report.md
-          diff -u examples/fixture-audit-report.md /tmp/agent-watchbench-fixture-audit-report.md
-
-      - name: Verify release index audit report
-        run: |
-          python agent_watchbench.py release-index-audit \
-            --root . \
-            --fail-on-missing \
-            --output /tmp/agent-watchbench-release-index-audit-report.md
-          diff -u examples/release-index-audit-report.md /tmp/agent-watchbench-release-index-audit-report.md
-
-      - name: Verify release sync audit report
-        run: |
-          python agent_watchbench.py release-sync-audit \
-            --root . \
-            --candidate 9cf57ed974903fbe210f392f73c6b6f1ac7f7895 \
-            --fail-on-stale \
-            --output /tmp/agent-watchbench-release-sync-audit-report.md
-          diff -u examples/release-sync-audit-report.md /tmp/agent-watchbench-release-sync-audit-report.md
+          python -m pip install --no-deps --no-build-isolation -e .
+          agent-watchbench --help

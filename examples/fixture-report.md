@@ -4,7 +4,8 @@
 - learning signals: 2
 - ranked project ideas: 2
 - boundary notes: 1
-- publish readiness: review required
+- missing-evidence warnings: 0
+- publish-readiness heuristic: review required
 
 ## Learning Signals
 - 01:00 JST - development heartbeat local patch / verification: fixture passed.
@@ -16,3 +17,6 @@
 
 ## Boundary Notes
 - agent-watchbench: review boundary terms before publication (secret, token)
+
+## Missing Evidence Warnings
+- none found

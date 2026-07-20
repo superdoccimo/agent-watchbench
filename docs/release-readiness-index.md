@@ -1,60 +1,51 @@
 # Agent Watchbench Release-Readiness Index
 
-Date: 2026-07-20
-Scope: private release-preparation index for `superdoccimo/agent-watchbench`
+This page is the active entry point for public-release review. It deliberately
+contains no candidate SHA or CI run URL. Candidate-specific values belong in a
+temporary filled copy of `docs/final-candidate-review-template.md`, created only
+after the candidate exists and checked with `release-sync-audit`.
 
-Agent Watchbench remains private. This page is a reviewer entry point that links
-the current safety, provenance, fixture, and release-candidate evidence without
-approving a public release, package publish, hosted service, external scan,
-production integration, credential change, or social/blog post.
-
-## Review Map
+## Review map
 
 - Public-release gate: `docs/public-release-gate.md`
 - Safety boundary: `SAFETY.md`
 - Provenance: `PROVENANCE.md`
-- Release-candidate evidence: `docs/release-candidate-evidence.md`
 - Final-candidate review template: `docs/final-candidate-review-template.md`
-- Filled final-candidate review: `docs/final-candidate-review-2026-07-20.md`
-- Synthetic fixture report: `examples/fixture-report.md`
+- Synthetic scan report: `examples/fixture-report.md`
 - Synthetic secret-scan report: `examples/secret-scan-report.md`
 - Content-redacted fixture audit: `examples/fixture-audit-report.md`
+- Historical private evidence: `docs/archive/`
 
-## Current Gate State
+## Required evidence
 
-- Current candidate commit: `a40470368d4569fd4da6a284de56357c82bd164c`
-- Current main CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29708990144`
-- Final-candidate review template target commit:
-  `a40470368d4569fd4da6a284de56357c82bd164c`
-- Final-candidate review template CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29708990144`
-- Filled final-candidate review target commit:
-  `9cf57ed974903fbe210f392f73c6b6f1ac7f7895`
-- Filled final-candidate review CI run:
-  `https://github.com/superdoccimo/agent-watchbench/actions/runs/29710509162`
-- Current CI result observed: `completed` / `success`
-- Repository visibility stays private until the public-release gate is reviewed
-  on a final candidate commit.
-- Checked-in examples are synthetic fixtures only and are reviewed through a
-  content-redacted fixture audit.
-- Secret-scan fixture evidence reports locations and finding kinds, not matched
-  values.
-- CI evidence is useful review input, but it is not release approval.
-- A release decision still needs a final local test run, regenerated fixture
-  diffs, repository visibility check, and GitHub Actions check on the candidate
-  commit.
+- Current branch, HEAD, git status, remote URL, visibility, CI result, open pull
+  requests, and open release-blocking issues are observed immediately before
+  review.
+- Source and tests compile and the full unit suite passes.
+- All checked-in synthetic reports regenerate exactly.
+- The repository secret scan completes with synthetic secret fixtures excluded
+  and no findings.
+- Git history and commit metadata are reviewed locally without copying detected
+  values into the evidence packet.
+- CI uses read-only permissions and safe fork-PR triggers.
+
+## Human Approval Required
+
+CI and local evidence do not approve publication. A human must choose the
+license and copyright holder, approve or remediate personal commit metadata,
+confirm that public descriptions and images are accurate, and authorize the
+visibility change separately.
 
 ## Stop Conditions
 
-Stop and open a follow-up issue instead of releasing if any final candidate
-check finds raw private logs, real user data, tokens, credentials, cookies,
-private keys, OAuth material, private identifiers, failing tests, stale fixture
-reports, failed CI, or unclear provenance.
+Stop and keep the repository private for any secret or personal-data finding,
+incomplete scan, failed test, stale fixture, candidate mismatch, failed CI,
+unsafe workflow, unclear provenance, license conflict, or misleading capability
+claim. Record only redacted path, line, kind, and required remediation.
 
-## Next Review Step
+## Candidate synchronization
 
-Before any visibility change, tag, GitHub release, package registry publishing,
-hosted service, external scan, production integration, credential/OAuth change,
-or social/blog posting, update this index with the final candidate commit,
-latest CI run, local verification commands, and the reviewer decision.
+Create a temporary candidate worksheet, replace all placeholders with observed
+values, and run `release-sync-audit` with the exact current HEAD and the
+worksheet passed explicitly through `--release-doc`. Do not treat a checked-in
+historical candidate worksheet as current evidence.

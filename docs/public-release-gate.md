@@ -1,44 +1,66 @@
 # Agent Watchbench Public-Release Gate
 
-Date: 2026-07-19
+Agent Watchbench stays private until every applicable item below is complete
+against the exact current default-branch HEAD and a named human separately
+authorizes the visibility change.
 
-Agent Watchbench stays private until every gate item below is complete and
-recorded. This gate applies before any repository visibility change, tag,
-GitHub release, package registry publishing, hosted service, external scan,
-production integration, or social/blog posting.
+## Repository and GitHub state
 
-## Checklist
+- Record branch, HEAD SHA, `git status`, remote URL, untracked and ignored files.
+- Confirm GitHub visibility is `PRIVATE`.
+- Confirm the current HEAD's GitHub Actions run completed successfully.
+- Confirm there is no open pull request or release-blocking issue that
+  supersedes the candidate.
 
-- Run a repository secret scan and record the command and result. The local
-  prototype includes a synthetic `examples/secret-scan-root` fixture and
-  checked-in `examples/secret-scan-report.md` proving that finding locations are
-  reported while secret values are not printed. For a real release-candidate
-  checkout, regenerate the synthetic fixture report first, then run
-  `secret-scan --root . --exclude-synthetic-fixtures --fail-on-findings` so
-  possible non-fixture secrets stop the gate with a non-zero exit code while
-  keeping matched values redacted.
-- Confirm checked-in examples and fixtures contain no raw private logs, real
-  user data, tokens, credentials, cookies, private keys, OAuth material, or
-  private identifiers. The local `fixture-audit` command records a
-  content-redacted inventory at `examples/fixture-audit-report.md` so this gate
-  can be reviewed without exposing fixture values.
-- Confirm the README covers local-only scope, hostile-input handling, and the
-  rule that commands copied from external input are summarized rather than
-  executed.
-- Run unit tests or a fixture-backed scan locally and record the passing
-  evidence.
-- Confirm the GitHub Actions fixture gate passes on the release-candidate
-  commit, including the synthetic fixture report diff.
-- Keep package registry publishing, hosted service deployment, external
-  scanning, production integration, and social/blog posting out of scope unless
-  each action is separately approved.
-- Record provenance for the reviewed prototype source and the verification
-  evidence used for the release decision.
+## Local implementation evidence
 
-## Rollback
+- Compile source and tests and run the complete unit suite.
+- Perform a disposable local editable install and CLI help check.
+- Regenerate and diff every checked-in synthetic report.
+- Run normal and abnormal smoke tests for every command.
+- Confirm input artifacts are unchanged and only the selected Markdown report
+  destination is writable.
 
-If any gate item fails, keep `superdoccimo/agent-watchbench` private, do not tag
-or release the repository, and open a follow-up issue with the failed item,
-evidence path, and smallest next review step. If `--fail-on-findings` exits
-non-zero after `--exclude-synthetic-fixtures`, preserve only the redacted report
-path and finding count in review notes; do not copy matched values.
+## Security and privacy evidence
+
+- Run `secret-scan --root . --exclude-synthetic-fixtures --fail-on-findings`.
+- Treat any scan error as incomplete evidence, not a clean result.
+- Review tracked, untracked, ignored, and historical Git content locally for
+  secrets, personal data, private paths, email addresses, internal hosts, IPs,
+  OAuth data, cookies, keys, logs, images, and binary files.
+- Report possible secrets only as path, line, kind, likelihood, and whether
+  deletion or rotation is required. Never copy the value.
+- Confirm examples and fixtures are synthetic and do not resemble live provider
+  credentials closely enough to trigger avoidable push protection.
+
+## Documentation and public claims
+
+- README, SAFETY, PROVENANCE, implementation, tests, fixtures, and CI describe
+  the same current behavior.
+- Future work is clearly separated from implemented commands.
+- Public text does not claim network blocking, sandboxing, SOC monitoring, GUI
+  functionality, runtime boundary blocking, AI-safety guarantees, or complete
+  secret detection.
+- Public thumbnails and videos avoid fabricated scores, completion counts,
+  evidence counts, GUI screens, or blocked-violation claims.
+
+## License and rights
+
+- A human selects OSS, source-visible proprietary, or another explicit form.
+- LICENSE, package metadata, README, author, and copyright-holder statements
+  agree with that selection.
+- Build/CI dependency licenses and rights to fixtures, text, images, and logos
+  are reviewed.
+
+## Candidate evidence and decision
+
+- Fill a temporary final-candidate worksheet after the candidate and CI exist.
+- Run `release-sync-audit` against that explicit worksheet.
+- Record exactly one decision: PASS, CONDITIONAL PASS, or BLOCK.
+- Treat updated documentation as evidence, never as implicit approval.
+
+## Stop and rollback
+
+If any gate fails, keep the repository private and do not tag, release, publish,
+deploy, integrate, change credentials, send content to an external scanner, or
+post publicly. Preserve only redacted evidence and the smallest safe next step.

@@ -1,11 +1,12 @@
 # Agent Watchbench Fixture Audit
 
 ## Summary
-- root: .
-- files checked: 15
-- files with synthetic marker: 9
+- root: <ROOT>
+- files checked: 16
+- files with synthetic marker: 10
 - files needing boundary review: 13
 - files with private-data blockers: 0
+- scan errors: 0
 - audit scope: examples/ and tests/fixtures/ only
 - value policy: fixture contents are not printed
 
@@ -16,6 +17,7 @@
 - examples/private-pr-packet-audit-report.md: synthetic marker missing; no boundary terms; no private-data blockers
 - examples/release-index-audit-report.md: synthetic marker missing; no boundary terms; no private-data blockers
 - examples/release-sync-audit-report.md: synthetic marker missing; no boundary terms; no private-data blockers
+- examples/release-sync-root/candidate-review.md: synthetic marker present; no boundary terms; no private-data blockers
 - examples/secret-scan-report.md: synthetic marker missing; secret, token; no private-data blockers
 - examples/secret-scan-root/.env.sample: synthetic marker present; token; no private-data blockers
 - examples/secret-scan-root/README.md: synthetic marker present; secret; no private-data blockers
@@ -25,3 +27,6 @@
 - tests/fixtures/secret-scan-root/.env.sample: synthetic marker present; token; no private-data blockers
 - tests/fixtures/secret-scan-root/README.md: synthetic marker present; secret; no private-data blockers
 - tests/fixtures/secret-scan-root/subdir/config.txt: synthetic marker present; secret; no private-data blockers
+
+## Scan Errors
+- none found

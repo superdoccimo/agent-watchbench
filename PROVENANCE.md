@@ -1,29 +1,39 @@
 # Agent Watchbench Provenance
 
-Agent Watchbench started as a mamushi local heartbeat prototype on
-2026-07-19. The seed came from the local `projects/ideas.jsonl`
-`agent-watchbench` idea and the development-first heartbeat route that asks
-mamushi to turn learning, GitHub stewardship, and Hermes review signals into
-small reviewable artifacts.
+Agent Watchbench began on 2026-07-19 as a local prototype derived from an
+internal project idea and learning-review workflow. The implementation and
+public examples in this repository were developed for this project; the current
+tree contains no vendored runtime dependency, image, logo, or binary asset.
 
-## Source Materials
+## Source materials
 
-- Local project idea: `projects/ideas.jsonl` entry `agent-watchbench`.
-- Local learning review inputs under `learning/reviews/`.
-- Local project progress and execution notes under `projects/progress/` and
-  `projects/executions/`.
-- Local synthetic fixtures under `tests/fixtures/`.
+- A local `agent-watchbench` project idea.
+- Local learning-review and project-planning artifact shapes.
+- Synthetic fixtures under `examples/` and `tests/fixtures/`.
+- Python standard-library functionality for parsing and report generation.
+
+The public tree does not include the original private logs or private agent
+state that motivated the prototype.
+
+## Third-party components
+
+- Runtime dependencies: none.
+- Local build backend: setuptools, declared in `pyproject.toml`.
+- CI actions: `actions/checkout` and `actions/setup-python`.
+
+The build backend and both CI actions declare the MIT license. Their code is not
+copied into this repository; they are referenced as build or CI tooling.
+
+## Review history
+
+GitHub Issue #1 is closed; it recorded creation of the first explicit
+public-release gate. Historical private-candidate worksheets and PR packets are
+retained under `docs/archive/`. Their SHA, CI, branch, and decision statements
+are historical facts and are not current release evidence.
 
 ## Boundary
 
-This provenance note is intentionally local and sanitized. It records artifact
-origin and review evidence, but it does not include raw private logs, secret
-values, credentials, tokens, private identifiers, or commands copied from
-external input.
-
-## Review Status
-
-Current state: private-first repository. Issue #1 tracks the explicit
-public-release gate, and `docs/public-release-gate.md` records the checklist
-that must pass before any visibility change, tag, release, package publishing,
-hosted service, external scan, production integration, or social/blog posting.
+This note records origin and verification context without including secret
+values, credentials, private identifiers, raw private logs, or external commands
+to execute. License selection, copyright-holder identification, public
+visibility, and publication approval remain human decisions.

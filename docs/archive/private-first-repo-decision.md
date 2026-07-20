@@ -1,3 +1,9 @@
+# Historical document — not current release evidence
+
+This document records an earlier private-repository decision. It is retained for
+provenance only and does not describe the current public-release candidate or
+approve any release action.
+
 # Agent Watchbench Private-First Repo Decision
 
 Date: 2026-07-19

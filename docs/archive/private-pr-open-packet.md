@@ -1,3 +1,8 @@
+# Historical document — not current release evidence
+
+This packet records an earlier private maintenance workflow. Its branch names,
+commits, and next actions are historical and must not be treated as current.
+
 # Agent Watchbench Private PR Open Packet
 
 Date: 2026-07-20

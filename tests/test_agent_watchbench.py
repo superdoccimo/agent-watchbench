@@ -1,6 +1,8 @@
-from pathlib import Path
 import contextlib
+import hashlib
 import io
+import os
+from pathlib import Path
 import shutil
 import tempfile
 import unittest
@@ -10,426 +12,146 @@ import agent_watchbench
 
 FIXTURES = Path(__file__).parent / "fixtures"
 ROOT = Path(__file__).resolve().parents[1]
+SYNTHETIC_CANDIDATE = "synthetic-candidate-commit"
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 class AgentWatchbenchTests(unittest.TestCase):
-    def test_scan_report_includes_learning_project_and_boundary_notes(self):
+    def populate_scan_root(self, root: Path) -> None:
+        (root / "learning" / "reviews").mkdir(parents=True)
+        (root / "projects").mkdir()
+        shutil.copy(FIXTURES / "learning-review.md", root / "learning" / "reviews" / "2099-01-02.md")
+        shutil.copy(FIXTURES / "ideas.jsonl", root / "projects" / "ideas.jsonl")
+
+    def test_scan_report_includes_learning_projects_boundary_and_evidence_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "learning" / "reviews").mkdir(parents=True)
-            (root / "projects").mkdir()
-            shutil.copy(FIXTURES / "learning-review.md", root / "learning" / "reviews" / "2099-01-02.md")
-            shutil.copy(FIXTURES / "ideas.jsonl", root / "projects" / "ideas.jsonl")
-
+            self.populate_scan_root(root)
             report = agent_watchbench.build_report(root, "2099-01-02").to_markdown()
 
         self.assertIn("- learning signals: 2", report)
         self.assertIn("- ranked project ideas: 2", report)
         self.assertIn("- boundary notes: 1", report)
-        self.assertIn("- publish readiness: review required", report)
-        self.assertIn("fixture passed", report)
-        self.assertIn("Agent Watchbench [prototype]: read-only scan report", report)
-        self.assertIn("agent-watchbench: review boundary terms", report)
+        self.assertIn("- missing-evidence warnings: 0", report)
+        self.assertIn("- publish-readiness heuristic: review required", report)
+        self.assertIn("## Missing Evidence Warnings\n- none found", report)
 
-    def test_missing_inputs_still_render_report(self):
+    def test_missing_inputs_render_explicit_missing_evidence_warnings(self):
         with tempfile.TemporaryDirectory() as tmp:
             report = agent_watchbench.build_report(Path(tmp), "2099-01-02").to_markdown()
 
-        self.assertIn("- publish readiness: no obvious boundary blockers", report)
-        self.assertIn("- none found", report)
-        self.assertIn("no obvious boundary-risk terms", report)
+        self.assertIn("- missing-evidence warnings: 2", report)
+        self.assertIn("learning/reviews/2099-01-02.md: missing", report)
+        self.assertIn("projects/ideas.jsonl: missing", report)
 
-    def test_scan_can_write_report_to_local_output_file(self):
+    def test_invalid_dates_and_day_traversal_are_rejected(self):
+        for invalid in ("2099-02-30", "2099-1-2", "../../outside"):
+            with self.subTest(invalid=invalid):
+                with tempfile.TemporaryDirectory() as tmp:
+                    with self.assertRaises(ValueError):
+                        agent_watchbench.build_report(Path(tmp), invalid)
+
+    def test_malformed_jsonl_is_reported_without_copying_input(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            output = root / "reports" / "watchbench.md"
-            with contextlib.redirect_stdout(io.StringIO()) as stdout:
-                status = agent_watchbench.main(
-                    ["scan", "--root", str(root), "--day", "2099-01-02", "--output", str(output)]
-                )
+            (root / "projects").mkdir()
+            private_value = "not-for-report-" + "x" * 20
+            (root / "projects" / "ideas.jsonl").write_text(
+                "{broken " + private_value + "\n", encoding="utf-8"
+            )
+            report = agent_watchbench.build_report(root, "2099-01-02").to_markdown()
+
+        self.assertIn("projects/ideas.jsonl:1: invalid-jsonl", report)
+        self.assertNotIn(private_value, report)
+
+    def test_scan_redacts_sensitive_assignments_and_collapses_control_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.populate_scan_root(root)
+            private_value = "sensitive" + "value" * 4
+            review = root / "learning" / "reviews" / "2099-01-02.md"
+            review.write_text(
+                "# Synthetic\n\n## Signals To Review\n\n- SERVICE_" + "TOKEN=" + private_value + "\n",
+                encoding="utf-8",
+            )
+            report = agent_watchbench.build_report(root, "2099-01-02").to_markdown()
+
+        self.assertIn("<REDACTED>", report)
+        self.assertNotIn(private_value, report)
+
+    def test_command_shaped_input_is_data_and_is_not_executed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.populate_scan_root(root)
+            sentinel = root / "command-ran"
+            ideas = root / "projects" / "ideas.jsonl"
+            ideas.write_text(
+                '{"project_id":"command-fixture","title":"Synthetic","status":"idea",'
+                '"first_step":"python -c create-command-ran"}\n',
+                encoding="utf-8",
+            )
+            report = agent_watchbench.build_report(root, "2099-01-02").to_markdown()
+
+        self.assertIn("python -c create-command-ran", report)
+        self.assertFalse(sentinel.exists())
+
+    def test_scan_changes_only_new_local_report_and_preserves_inputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.populate_scan_root(root)
+            inputs = [
+                root / "learning" / "reviews" / "2099-01-02.md",
+                root / "projects" / "ideas.jsonl",
+            ]
+            before = {path: digest(path) for path in inputs}
+            output = root / "local-reports" / "watchbench.md"
+            status = agent_watchbench.main(
+                ["scan", "--root", str(root), "--day", "2099-01-02", "--output", str(output)]
+            )
 
             self.assertEqual(status, 0)
-            self.assertEqual(stdout.getvalue(), "")
             self.assertTrue(output.exists())
-            self.assertIn("# Agent Watchbench Report - 2099-01-02", output.read_text(encoding="utf-8"))
+            self.assertEqual(before, {path: digest(path) for path in inputs})
 
-    def test_checked_in_fixture_root_regenerates_example_report(self):
-        report = agent_watchbench.build_report(ROOT / "examples" / "fixture-root", "2099-01-02").to_markdown()
-
-        expected = (ROOT / "examples" / "fixture-report.md").read_text(encoding="utf-8")
-        self.assertEqual(report, expected)
-
-    def test_pyproject_exposes_local_console_script(self):
-        metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-
-        self.assertIn('name = "agent-watchbench"', metadata)
-        self.assertIn('requires-python = ">=3.10"', metadata)
-        self.assertIn('agent-watchbench = "agent_watchbench:main"', metadata)
-        self.assertIn('py-modules = ["agent_watchbench"]', metadata)
-
-    def test_private_first_decision_keeps_repo_creation_gated(self):
-        decision = (ROOT / "docs" / "private-first-repo-decision.md").read_text(encoding="utf-8")
-
-        self.assertIn("Create a private `superdoccimo/agent-watchbench` repository", decision)
-        self.assertIn("private `superdoccimo/agent-watchbench` repository", decision)
-        self.assertIn("Do not publish to\na package registry", decision)
-        self.assertIn("synthetic fixtures only", decision)
-
-    def test_safety_note_documents_green_zone_boundaries(self):
-        safety = (ROOT / "SAFETY.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("local-only prototype", safety)
-        self.assertIn("Use synthetic fixtures", safety)
-        self.assertIn("hostile input", safety)
-        self.assertIn("Do not publish to a\n  package registry", safety)
-        self.assertIn("must not print secret\n  values", safety)
-        self.assertIn("SAFETY.md", readme)
-
-    def test_provenance_note_records_local_heartbeat_origin(self):
-        provenance = (ROOT / "PROVENANCE.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        decision = (ROOT / "docs" / "private-first-repo-decision.md").read_text(encoding="utf-8")
-
-        self.assertIn("mamushi local heartbeat prototype", provenance)
-        self.assertIn("projects/ideas.jsonl", provenance)
-        self.assertIn("synthetic fixtures", provenance)
-        self.assertIn("does not include raw private logs", provenance)
-        self.assertIn("PROVENANCE.md", readme)
-        self.assertIn("Safety and provenance notes are linked", decision)
-
-    def test_public_release_gate_documents_issue_one_boundary(self):
-        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
-        safety = (ROOT / "SAFETY.md").read_text(encoding="utf-8")
-        provenance = (ROOT / "PROVENANCE.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("Agent Watchbench stays private", gate)
-        self.assertIn("repository secret scan", gate)
-        self.assertIn("no raw private logs", gate)
-        self.assertIn("commands copied from external input", gate)
-        self.assertIn("fixture-backed scan", gate)
-        self.assertIn("separately approved", gate)
-        self.assertIn("keep `superdoccimo/agent-watchbench` private", gate)
-        self.assertIn("docs/public-release-gate.md", readme)
-        self.assertIn("docs/public-release-gate.md", safety)
-        self.assertIn("Issue #1 tracks", provenance)
-
-    def test_ci_workflow_runs_readonly_fixture_gate(self):
-        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
-
-        self.assertIn("permissions:\n  contents: read", workflow)
-        self.assertIn("python -m py_compile agent_watchbench.py", workflow)
-        self.assertIn("python -m unittest discover -s tests -v", workflow)
-        self.assertIn("--root examples/fixture-root", workflow)
-        self.assertIn("diff -u examples/fixture-report.md", workflow)
-        self.assertIn("GitHub Actions", readme)
-        self.assertIn("GitHub Actions fixture gate passes", gate)
-
-    def test_release_candidate_evidence_consumes_passing_ci_without_approval(self):
-        evidence = (ROOT / "docs" / "release-candidate-evidence.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", evidence)
-        self.assertIn("actions/runs/29708990144", evidence)
-        self.assertIn("completed` / `success", evidence)
-        self.assertIn("contents: read", evidence)
-        self.assertIn("python -m unittest discover -s tests -v", evidence)
-        self.assertIn("examples/fixture-root", evidence)
-        self.assertIn("synthetic fixtures\n  excluded", evidence)
-        self.assertIn("not a release approval", evidence)
-        self.assertIn("repository secret scan", evidence)
-        self.assertIn("docs/release-candidate-evidence.md", readme)
-
-    def test_secret_scan_reports_locations_without_values(self):
-        report = agent_watchbench.secret_scan(FIXTURES / "secret-scan-root").to_markdown()
-
-        self.assertIn("- findings: 2", report)
-        self.assertIn("- .env.sample:1 [token] value redacted", report)
-        self.assertIn("- subdir/config.txt:1 [client-secret] value redacted", report)
-        self.assertNotIn("synthetic_placeholder_value", report)
-
-    def test_checked_in_secret_scan_fixture_report_regenerates(self):
-        report = agent_watchbench.secret_scan(Path("examples/secret-scan-root")).to_markdown()
-
-        expected = (ROOT / "examples" / "secret-scan-report.md").read_text(encoding="utf-8")
-        self.assertEqual(report, expected)
-
-    def test_secret_scan_can_fail_on_findings_without_printing_values(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "secret-scan.md"
-            with contextlib.redirect_stdout(io.StringIO()) as stdout:
-                status = agent_watchbench.main(
-                    [
-                        "secret-scan",
-                        "--root",
-                        str(FIXTURES / "secret-scan-root"),
-                        "--output",
-                        str(output),
-                        "--fail-on-findings",
-                    ]
-                )
-
-            report = output.read_text(encoding="utf-8")
-
-        self.assertEqual(status, 1)
-        self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("- findings: 2", report)
-        self.assertNotIn("synthetic_placeholder_value", report)
-
-    def test_secret_scan_fail_on_findings_passes_when_clean(self):
+    def test_output_overwrite_requires_force(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "note.txt").write_text("synthetic clean fixture\n", encoding="utf-8")
-
-            status = agent_watchbench.main(["secret-scan", "--root", str(root), "--fail-on-findings"])
-
-        self.assertEqual(status, 0)
-
-    def test_secret_scan_can_exclude_synthetic_secret_fixtures(self):
-        report = agent_watchbench.secret_scan(ROOT, exclude_synthetic_fixtures=True).to_markdown()
-
-        self.assertIn("- findings: 0", report)
-        self.assertNotIn("examples/secret-scan-root/.env.sample", report)
-
-    def test_readme_and_release_gate_document_secret_scan_fixture(self):
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
-
-        self.assertIn("agent_watchbench.py secret-scan", readme)
-        self.assertIn("examples/secret-scan-report.md", readme)
-        self.assertIn("--fail-on-findings", readme)
-        self.assertIn("--exclude-synthetic-fixtures", readme)
-        self.assertIn("--fail-on-findings", gate)
-        self.assertIn("--exclude-synthetic-fixtures", gate)
-        self.assertIn("secret values are not printed", gate)
-        self.assertIn("examples/secret-scan-root", gate)
-
-    def test_fixture_audit_reports_inventory_without_contents(self):
-        report = agent_watchbench.fixture_audit(ROOT).to_markdown()
-
-        self.assertIn("- audit scope: examples/ and tests/fixtures/ only", report)
-        self.assertIn("- files with private-data blockers: 0", report)
-        self.assertIn("examples/secret-scan-root/.env.sample", report)
-        self.assertIn("no private-data blockers", report)
-        self.assertNotIn("synthetic_placeholder_value", report)
-
-    def test_checked_in_fixture_audit_report_regenerates(self):
-        report = agent_watchbench.fixture_audit(Path(".")).to_markdown()
-
-        expected = (ROOT / "examples" / "fixture-audit-report.md").read_text(encoding="utf-8")
-        self.assertEqual(report, expected)
-
-    def test_readme_release_gate_and_ci_document_fixture_audit(self):
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        gate = (ROOT / "docs" / "public-release-gate.md").read_text(encoding="utf-8")
-        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-
-        self.assertIn("fixture-audit", readme)
-        self.assertIn("examples/fixture-audit-report.md", readme)
-        self.assertIn("examples/fixture-audit-report.md", gate)
-        self.assertIn("fixture-audit", workflow)
-
-    def test_release_readiness_index_links_review_evidence_without_approval(self):
-        index = (ROOT / "docs" / "release-readiness-index.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("docs/public-release-gate.md", index)
-        self.assertIn("SAFETY.md", index)
-        self.assertIn("PROVENANCE.md", index)
-        self.assertIn("docs/release-candidate-evidence.md", index)
-        self.assertIn("docs/final-candidate-review-template.md", index)
-        self.assertIn("docs/final-candidate-review-2026-07-20.md", index)
-        self.assertIn("examples/fixture-report.md", index)
-        self.assertIn("examples/secret-scan-report.md", index)
-        self.assertIn("examples/fixture-audit-report.md", index)
-        self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", index)
-        self.assertIn("actions/runs/29708990144", index)
-        self.assertIn("9cf57ed974903fbe210f392f73c6b6f1ac7f7895", index)
-        self.assertIn("actions/runs/29710509162", index)
-        self.assertIn("not release approval", index)
-        self.assertIn("Stop and open a follow-up issue", index)
-        self.assertIn("docs/release-readiness-index.md", readme)
-        self.assertIn("docs/final-candidate-review-template.md", readme)
-
-    def test_final_candidate_review_template_keeps_release_decision_separate(self):
-        template = (ROOT / "docs" / "final-candidate-review-template.md").read_text(encoding="utf-8")
-
-        self.assertIn("a40470368d4569fd4da6a284de56357c82bd164c", template)
-        self.assertIn("actions/runs/29708990144", template)
-        self.assertIn("Expected repository visibility before review: `PRIVATE`", template)
-        self.assertIn("python3 -m unittest discover -s tests -v", template)
-        self.assertIn("--fail-on-findings", template)
-        self.assertIn("Confirm the repository is still private", template)
-        self.assertIn("Candidate is ready for a separate public-release decision", template)
-        self.assertIn("does not approve", template)
-        self.assertIn("Stop and keep the repository private", template)
-
-    def test_filled_final_candidate_review_records_current_private_candidate(self):
-        review = (ROOT / "docs" / "final-candidate-review-2026-07-20.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("9cf57ed974903fbe210f392f73c6b6f1ac7f7895", review)
-        self.assertIn("actions/runs/29710509162", review)
-        self.assertIn("Repository visibility observed before review: `PRIVATE`", review)
-        self.assertIn("Open release-blocking issues observed before review: none", review)
-        self.assertIn("Open pull requests observed before review: none", review)
-        self.assertIn("python3 -m unittest discover -s tests -v", review)
-        self.assertIn("examples/private-pr-packet-audit-report.md", review)
-        self.assertIn("--fail-on-findings", review)
-        self.assertIn("Candidate is ready for a separate public-release decision", review)
-        self.assertIn("public-release approval gate is still separate", review)
-        self.assertIn("did not change repository visibility", review)
-        self.assertIn("docs/final-candidate-review-2026-07-20.md", readme)
-
-    def test_private_pr_review_checklist_keeps_quiet_window_followup_gated(self):
-        checklist = (ROOT / "docs" / "private-pr-review-checklist.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("private repository maintenance only", checklist)
-        self.assertIn("Confirm the repository is still `PRIVATE`", checklist)
-        self.assertIn("no existing open issues or pull requests", checklist)
-        self.assertIn("hostile input", checklist)
-        self.assertIn("python3 -m unittest discover -s tests -v", checklist)
-        self.assertIn("--exclude-synthetic-fixtures --fail-on-findings", checklist)
-        self.assertIn("git diff --check", checklist)
-        self.assertIn("Merge only if CI passes", checklist)
-        self.assertIn("repository visibility remains `PRIVATE`", checklist)
-        self.assertIn("docs/private-pr-review-checklist.md", readme)
-
-    def test_private_pr_description_template_carries_review_gates(self):
-        template = (ROOT / "docs" / "private-pr-description-template.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("## Verification", template)
-        self.assertIn("python3 -m unittest discover -s tests -v", template)
-        self.assertIn("fixture-audit", template)
-        self.assertIn("--exclude-synthetic-fixtures --fail-on-findings", template)
-        self.assertIn("Repository visibility confirmed `PRIVATE`", template)
-        self.assertIn("No public visibility change", template)
-        self.assertIn("No package registry publishing", template)
-        self.assertIn("hostile input", template)
-        self.assertIn("Merge only after CI passes", template)
-        self.assertIn("docs/private-pr-description-template.md", readme)
-
-    def test_private_pr_open_packet_records_next_private_pr_without_release_approval(self):
-        packet = (ROOT / "docs" / "private-pr-open-packet.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("mamushi/release-evidence-current-candidate", packet)
-        self.assertIn("51d496d", packet)
-        self.assertIn("a005a01", packet)
-        self.assertIn("50b6574", packet)
-        self.assertIn("39bb58e", packet)
-        self.assertIn("fbb241b", packet)
-        self.assertIn("private PR packet audit gate", packet)
-        self.assertIn("examples/private-pr-packet-audit-report.md", packet)
-        self.assertIn("Repository visibility confirmed `PRIVATE`", packet)
-        self.assertIn("No public visibility change", packet)
-        self.assertIn("package registry", packet)
-        self.assertIn("hostile input", packet)
-        self.assertIn("Merge only after CI passes", packet)
-        self.assertIn("does not approve", packet)
-        self.assertIn("docs/private-pr-open-packet.md", readme)
-
-    def test_private_pr_packet_audit_reports_required_markers_without_copying_packet(self):
-        report = agent_watchbench.private_pr_packet_audit(Path(".")).to_markdown()
-
-        expected = (ROOT / "examples" / "private-pr-packet-audit-report.md").read_text(encoding="utf-8")
-        self.assertEqual(report, expected)
-        self.assertNotIn("Refreshes the private release-candidate evidence path", report)
-
-    def test_private_pr_packet_audit_can_fail_on_missing_markers(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            packet = root / "packet.md"
-            packet.write_text("PRIVATE only\n", encoding="utf-8")
-
-            status = agent_watchbench.main(
-                ["pr-packet-audit", "--root", str(root), "--packet", str(packet), "--fail-on-missing"]
-            )
-
-        self.assertEqual(status, 1)
-
-    def test_readme_documents_private_pr_packet_audit_gate(self):
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("pr-packet-audit", readme)
-        self.assertIn("--fail-on-missing", readme)
-        self.assertIn("examples/private-pr-packet-audit-report.md", readme)
-
-    def test_release_index_audit_reports_required_markers_without_copying_index(self):
-        report = agent_watchbench.release_index_audit(Path(".")).to_markdown()
-
-        expected = (ROOT / "examples" / "release-index-audit-report.md").read_text(encoding="utf-8")
-        self.assertEqual(report, expected)
-        self.assertNotIn("Stop and open a follow-up issue", report)
-
-    def test_release_index_audit_can_fail_on_missing_markers(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            index = root / "release-index.md"
-            index.write_text("private candidate only\n", encoding="utf-8")
-
-            status = agent_watchbench.main(
-                ["release-index-audit", "--root", str(root), "--index", str(index), "--fail-on-missing"]
-            )
-
-        self.assertEqual(status, 1)
-
-    def test_readme_and_ci_document_release_index_audit_gate(self):
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-
-        self.assertIn("release-index-audit", readme)
-        self.assertIn("examples/release-index-audit-report.md", readme)
-        self.assertIn("release-index-audit", workflow)
-        self.assertIn("examples/release-index-audit-report.md", workflow)
-
-    def test_release_sync_audit_reports_stale_docs_without_copying_text(self):
-        report = agent_watchbench.release_sync_audit(
-            Path("."),
-            "9cf57ed974903fbe210f392f73c6b6f1ac7f7895",
-        ).to_markdown()
-
-        expected = (ROOT / "examples" / "release-sync-audit-report.md").read_text(encoding="utf-8")
-        self.assertEqual(report, expected)
-        self.assertNotIn("Candidate is ready for a separate public-release decision", report)
-
-    def test_release_sync_audit_can_fail_on_stale_docs(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            release_doc = root / "release.md"
-            release_doc.write_text("different candidate\n", encoding="utf-8")
-
+            output = root / "local-reports" / "watchbench.md"
+            output.parent.mkdir()
+            output.write_text("existing\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as raised:
+                    agent_watchbench.main(
+                        ["scan", "--root", str(root), "--day", "2099-01-02", "--output", str(output)]
+                    )
+            self.assertEqual(raised.exception.code, 2)
             status = agent_watchbench.main(
                 [
-                    "release-sync-audit",
+                    "scan",
                     "--root",
                     str(root),
-                    "--candidate",
-                    "synthetic-candidate-commit",
-                    "--release-doc",
-                    str(release_doc),
-                    "--fail-on-stale",
+                    "--day",
+                    "2099-01-02",
+                    "--output",
+                    str(output),
+                    "--force",
                 ]
             )
+            self.assertEqual(status, 0)
+            self.assertNotEqual(output.read_text(encoding="utf-8"), "existing\n")
 
-        self.assertEqual(status, 1)
-
-    def test_release_sync_audit_rejects_blank_candidate_marker(self):
-        with self.assertRaisesRegex(ValueError, "must not be empty"):
-            agent_watchbench.release_sync_audit(Path("."), "   ")
-
-    def test_release_sync_audit_rejects_candidate_marker_with_whitespace(self):
+    def test_output_never_replaces_an_explicit_audit_input(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            release_doc = root / "release.md"
-            release_doc.write_text("synthetic candidate marker\n", encoding="utf-8")
-
-            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            report_dir = root / "local-reports"
+            report_dir.mkdir()
+            release_doc = report_dir / "candidate.md"
+            original = "Candidate: " + SYNTHETIC_CANDIDATE + "\n"
+            release_doc.write_text(original, encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as raised:
                     agent_watchbench.main(
                         [
@@ -437,25 +159,366 @@ class AgentWatchbenchTests(unittest.TestCase):
                             "--root",
                             str(root),
                             "--candidate",
-                            "synthetic candidate",
+                            SYNTHETIC_CANDIDATE,
                             "--release-doc",
                             str(release_doc),
+                            "--output",
+                            str(release_doc),
+                            "--force",
+                        ]
+                    )
+            self.assertEqual(raised.exception.code, 2)
+            self.assertEqual(release_doc.read_text(encoding="utf-8"), original)
+
+    def test_output_inside_root_must_use_local_reports_and_markdown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for output in (root / "README.md", root / "local-reports" / "report.txt"):
+                with self.subTest(output=output):
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        with self.assertRaises(SystemExit):
+                            agent_watchbench.main(
+                                ["scan", "--root", str(root), "--day", "2099-01-02", "--output", str(output)]
+                            )
+
+    def test_output_symlink_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "local-reports"
+            output_dir.mkdir()
+            target = output_dir / "target.md"
+            target.write_text("safe\n", encoding="utf-8")
+            link = output_dir / "report.md"
+            try:
+                link.symlink_to(target)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable")
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    agent_watchbench.main(
+                        [
+                            "scan",
+                            "--root",
+                            str(root),
+                            "--day",
+                            "2099-01-02",
+                            "--output",
+                            str(link),
+                            "--force",
                         ]
                     )
 
-        self.assertEqual(raised.exception.code, 2)
-        self.assertIn("single token without whitespace", stderr.getvalue())
+    def test_output_symlink_parent_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            report_dir = root / "local-reports"
+            try:
+                report_dir.symlink_to(Path(outside_tmp), target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable")
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    agent_watchbench.main(
+                        [
+                            "scan",
+                            "--root",
+                            str(root),
+                            "--day",
+                            "2099-01-02",
+                            "--output",
+                            str(report_dir / "report.md"),
+                        ]
+                    )
 
-    def test_readme_and_ci_document_release_sync_audit_gate(self):
+    def test_nonexistent_file_root_and_symlink_root_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            file_root = base / "file"
+            file_root.write_text("x", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                agent_watchbench.validate_root(base / "missing")
+            with self.assertRaises(ValueError):
+                agent_watchbench.validate_root(file_root)
+            link = base / "root-link"
+            try:
+                link.symlink_to(base, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                return
+            with self.assertRaises(ValueError):
+                agent_watchbench.validate_root(link)
+
+    def test_secret_scan_reports_locations_and_kinds_without_values(self):
+        report = agent_watchbench.secret_scan(FIXTURES / "secret-scan-root").to_markdown()
+
+        self.assertIn("- findings: 2", report)
+        self.assertIn("- .env.sample:1 [token] value redacted", report)
+        self.assertIn("- subdir/config.txt:1 [client-secret] value redacted", report)
+        self.assertNotIn("synthetic_placeholder_value", report)
+
+    def test_secret_scan_detects_provider_shapes_constructed_at_runtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            values = [
+                "gh" + "p_" + "A" * 30,
+                "s" + "k-" + "B" * 30,
+                "AK" + "IA" + "C" * 16,
+                "eyJ" + "D" * 12 + "." + "E" * 12 + "." + "F" * 12,
+                "-----BEGIN " + "PRIVATE KEY-----",
+            ]
+            (root / ".env").write_text("\n".join(values) + "\n", encoding="utf-8")
+            report = agent_watchbench.secret_scan(root)
+            markdown = report.to_markdown()
+
+        kinds = {finding.kind for finding in report.findings}
+        self.assertTrue({"github-token", "openai-key", "aws-access-key", "jwt", "private-key"} <= kinds)
+        for value in values:
+            self.assertNotIn(value, markdown)
+
+    def test_hidden_files_are_scanned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            private_value = "placeholder" + "x" * 20
+            (root / ".env").write_text("SERVICE_" + "TOKEN=" + private_value + "\n", encoding="utf-8")
+            report = agent_watchbench.secret_scan(root)
+
+        self.assertEqual(report.files_checked, 1)
+        self.assertEqual(report.findings[0].path, ".env")
+
+    def test_secret_scan_fail_on_findings_and_clean_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "clean.txt").write_text("synthetic clean fixture\n", encoding="utf-8")
+            self.assertEqual(
+                agent_watchbench.main(["secret-scan", "--root", str(root), "--fail-on-findings"]), 0
+            )
+            (root / ".env").write_text("SERVICE_" + "TOKEN=" + "x" * 20 + "\n", encoding="utf-8")
+            self.assertEqual(
+                agent_watchbench.main(["secret-scan", "--root", str(root), "--fail-on-findings"]), 1
+            )
+
+    def test_binary_and_large_files_make_scan_incomplete(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "clean.txt").write_text("synthetic clean fixture\n", encoding="utf-8")
+            (root / "binary.bin").write_bytes(b"\x00binary")
+            with (root / "large.txt").open("wb") as stream:
+                stream.truncate(agent_watchbench.MAX_FILE_BYTES + 1)
+            report = agent_watchbench.secret_scan(root)
+
+        kinds = {error.kind for error in report.scan_errors}
+        self.assertIn("binary-file", kinds)
+        self.assertIn("file-too-large", kinds)
+        self.assertIn("- scan complete: no", report.to_markdown())
+
+    def test_outward_and_circular_symlinks_are_not_followed(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            outside = Path(outside_tmp)
+            outside_value = "outside" + "x" * 20
+            (outside / "secret.txt").write_text("SERVICE_" + "TOKEN=" + outside_value, encoding="utf-8")
+            outward = root / "outward"
+            circular = root / "circular"
+            try:
+                outward.symlink_to(outside, target_is_directory=True)
+                circular.symlink_to(root, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable")
+            report = agent_watchbench.secret_scan(root)
+            markdown = report.to_markdown()
+
+        self.assertEqual(report.files_checked, 0)
+        self.assertEqual([error.kind for error in report.scan_errors], ["symlink", "symlink"])
+        self.assertNotIn(outside_value, markdown)
+
+    @unittest.skipIf(os.name == "nt", "permission semantics are not reliable on Windows")
+    def test_permission_denied_file_is_reported_without_exception_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            blocked = root / "blocked.txt"
+            blocked.write_text("synthetic\n", encoding="utf-8")
+            blocked.chmod(0)
+            try:
+                report = agent_watchbench.secret_scan(root)
+            finally:
+                blocked.chmod(0o600)
+        self.assertIn("permission-denied", {error.kind for error in report.scan_errors})
+
+    def test_fixture_audit_reports_inventory_without_contents(self):
+        report = agent_watchbench.fixture_audit(ROOT).to_markdown()
+
+        self.assertIn("- audit scope: examples/ and tests/fixtures/ only", report)
+        self.assertIn("- files with private-data blockers: 0", report)
+        self.assertIn("examples/secret-scan-root/.env.sample", report)
+        self.assertNotIn("synthetic_placeholder_value", report)
+
+    def test_audit_inputs_reject_traversal_and_absolute_outside_paths(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            outside = Path(outside_tmp) / "outside.md"
+            outside.write_text("synthetic\n", encoding="utf-8")
+            for supplied in (Path("../outside.md"), Path("docs/../outside.md"), outside):
+                with self.subTest(supplied=supplied):
+                    with self.assertRaises(ValueError):
+                        agent_watchbench.private_pr_packet_audit(root, supplied)
+                    with self.assertRaises(ValueError):
+                        agent_watchbench.release_index_audit(root, supplied)
+                    with self.assertRaises(ValueError):
+                        agent_watchbench.release_sync_audit(root, SYNTHETIC_CANDIDATE, [supplied])
+
+    def test_private_pr_packet_audit_is_content_redacted(self):
+        report = agent_watchbench.private_pr_packet_audit(ROOT).to_markdown()
+        expected = (ROOT / "examples" / "private-pr-packet-audit-report.md").read_text(encoding="utf-8")
+
+        self.assertEqual(report, expected)
+        self.assertNotIn("Refreshes the private release-candidate evidence path", report)
+
+    def test_release_index_audit_is_structural_and_content_redacted(self):
+        report = agent_watchbench.release_index_audit(ROOT).to_markdown()
+        expected = (ROOT / "examples" / "release-index-audit-report.md").read_text(encoding="utf-8")
+
+        self.assertEqual(report, expected)
+        self.assertNotIn("Stop and open a follow-up issue", report)
+
+    def test_release_sync_requires_explicit_docs_and_detects_stale_docs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            current = root / "current.md"
+            stale = root / "stale.md"
+            substring = root / "substring.md"
+            current.write_text("Candidate: " + SYNTHETIC_CANDIDATE + "\n", encoding="utf-8")
+            stale.write_text("Candidate: another-marker\n", encoding="utf-8")
+            substring.write_text("Candidate: prefix-" + SYNTHETIC_CANDIDATE + "-suffix\n", encoding="utf-8")
+            report = agent_watchbench.release_sync_audit(
+                root, SYNTHETIC_CANDIDATE, [current, stale, substring]
+            )
+
+        self.assertEqual(report.files_checked, ["current.md", "stale.md", "substring.md"])
+        self.assertEqual(report.stale_files, ["stale.md", "substring.md"])
+        self.assertNotIn(SYNTHETIC_CANDIDATE, report.to_markdown())
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "at least one"):
+                agent_watchbench.release_sync_audit(Path(tmp), SYNTHETIC_CANDIDATE, [])
+
+    def test_candidate_validation_rejects_blank_whitespace_control_and_length(self):
+        invalid = ("", "   ", " leading", "trailing ", "two tokens", "control\x07", "x" * 129)
+        for marker in invalid:
+            with self.subTest(marker_length=len(marker)):
+                with self.assertRaises(ValueError):
+                    agent_watchbench.normalize_candidate_marker(marker)
+        self.assertEqual(agent_watchbench.normalize_candidate_marker("abc-123._"), "abc-123._")
+
+    def test_checked_in_reports_regenerate_exactly_and_use_portable_paths(self):
+        checks = {
+            ROOT / "examples" / "fixture-report.md": agent_watchbench.build_report(
+                ROOT / "examples" / "fixture-root", "2099-01-02"
+            ).to_markdown(),
+            ROOT / "examples" / "secret-scan-report.md": agent_watchbench.secret_scan(
+                ROOT / "examples" / "secret-scan-root"
+            ).to_markdown(),
+            ROOT / "examples" / "fixture-audit-report.md": agent_watchbench.fixture_audit(ROOT).to_markdown(),
+            ROOT / "examples" / "private-pr-packet-audit-report.md": agent_watchbench.private_pr_packet_audit(
+                ROOT
+            ).to_markdown(),
+            ROOT / "examples" / "release-index-audit-report.md": agent_watchbench.release_index_audit(
+                ROOT
+            ).to_markdown(),
+            ROOT / "examples" / "release-sync-audit-report.md": agent_watchbench.release_sync_audit(
+                ROOT / "examples" / "release-sync-root",
+                SYNTHETIC_CANDIDATE,
+                [Path("candidate-review.md")],
+            ).to_markdown(),
+        }
+        for expected_path, actual in checks.items():
+            with self.subTest(expected=expected_path.name):
+                self.assertEqual(actual, expected_path.read_text(encoding="utf-8"))
+                self.assertNotIn("\\", actual)
+
+    def test_repeated_reports_are_byte_deterministic(self):
+        first = agent_watchbench.build_report(ROOT / "examples" / "fixture-root", "2099-01-02").to_markdown()
+        second = agent_watchbench.build_report(ROOT / "examples" / "fixture-root", "2099-01-02").to_markdown()
+        self.assertEqual(first.encode(), second.encode())
+
+    def test_secret_scan_can_exclude_synthetic_fixtures(self):
+        report = agent_watchbench.secret_scan(ROOT, exclude_synthetic_fixtures=True)
+
+        self.assertEqual(report.findings, [])
+        self.assertNotIn("examples/secret-scan-root/.env.sample", report.to_markdown())
+
+    def test_pyproject_exposes_local_console_script_and_tested_versions(self):
+        metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+        self.assertIn('name = "agent-watchbench"', metadata)
+        self.assertIn('requires-python = ">=3.10"', metadata)
+        self.assertIn('agent-watchbench = "agent_watchbench:main"', metadata)
+        for version in range(10, 15):
+            self.assertIn(f'Programming Language :: Python :: 3.{version}', metadata)
+
+    def test_readme_and_safety_describe_actual_scope_and_limitations(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        safety = (ROOT / "SAFETY.md").read_text(encoding="utf-8")
+        provenance = (ROOT / "PROVENANCE.md").read_text(encoding="utf-8")
+
+        self.assertIn("learning/reviews/YYYY-MM-DD.md", readme)
+        self.assertIn("projects/ideas.jsonl", readme)
+        self.assertIn("Future work", readme)
+        self.assertIn("not implemented as standalone", readme)
+        self.assertIn("local-reports/", readme)
+        self.assertNotIn("/home/ubuntu/security-guard", readme)
+        self.assertIn("does not provide a sandbox", readme)
+        self.assertIn("does not guarantee", safety)
+        self.assertIn("Issue #1 is closed", provenance)
+
+    def test_release_documents_have_no_active_hardcoded_candidate(self):
+        active = [
+            ROOT / "README.md",
+            ROOT / "docs" / "release-readiness-index.md",
+            ROOT / "docs" / "final-candidate-review-template.md",
+            ROOT / ".github" / "workflows" / "ci.yml",
+            ROOT / "tests" / "test_agent_watchbench.py",
+            ROOT / "agent_watchbench.py",
+        ]
+        old_candidates = (
+            "a4047036" + "8d4569fd4da6a284de56357c82bd164c",
+            "9cf57ed9" + "74903fbe210f392f73c6b6f1ac7f7895",
+            "29708" + "990144",
+            "29710" + "509162",
+        )
+        for path in active:
+            text = path.read_text(encoding="utf-8")
+            for marker in old_candidates:
+                self.assertNotIn(marker, text, path)
+
+    def test_historical_private_documents_are_archived_and_labeled(self):
+        archive = ROOT / "docs" / "archive"
+        expected = (
+            "private-first-repo-decision.md",
+            "private-pr-description-template.md",
+            "private-pr-open-packet.md",
+            "private-pr-review-checklist.md",
+            "release-candidate-evidence.md",
+            "final-candidate-review-2026-07-20.md",
+        )
+        for name in expected:
+            path = archive / name
+            self.assertTrue(path.exists(), name)
+            self.assertIn("Historical document", path.read_text(encoding="utf-8"))
+
+    def test_ci_is_readonly_sha_pinned_cross_platform_and_complete(self):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-        self.assertIn("release-sync-audit", readme)
-        self.assertIn("examples/release-sync-audit-report.md", readme)
-        self.assertIn("--candidate", readme)
-        self.assertIn("single token", readme)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0", workflow)
+        self.assertIn("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97", workflow)
+        self.assertIn("ubuntu-latest", workflow)
+        self.assertIn("windows-latest", workflow)
+        for version in range(10, 15):
+            self.assertIn(f'"3.{version}"', workflow)
+        self.assertIn("tests/test_agent_watchbench.py", workflow)
+        self.assertIn("private-pr-packet-audit", workflow)
+        self.assertIn("release-index-audit", workflow)
         self.assertIn("release-sync-audit", workflow)
-        self.assertIn("examples/release-sync-audit-report.md", workflow)
+        self.assertIn("--exclude-synthetic-fixtures", workflow)
+        self.assertNotIn("pull_request_target", workflow)
 
 
 if __name__ == "__main__":
