@@ -419,6 +419,33 @@ class AgentWatchbenchTests(unittest.TestCase):
 
         self.assertEqual(status, 1)
 
+    def test_release_sync_audit_rejects_blank_candidate_marker(self):
+        with self.assertRaisesRegex(ValueError, "must not be empty"):
+            agent_watchbench.release_sync_audit(Path("."), "   ")
+
+    def test_release_sync_audit_rejects_candidate_marker_with_whitespace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            release_doc = root / "release.md"
+            release_doc.write_text("synthetic candidate marker\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as raised:
+                    agent_watchbench.main(
+                        [
+                            "release-sync-audit",
+                            "--root",
+                            str(root),
+                            "--candidate",
+                            "synthetic candidate",
+                            "--release-doc",
+                            str(release_doc),
+                        ]
+                    )
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("single token without whitespace", stderr.getvalue())
+
     def test_readme_and_ci_document_release_sync_audit_gate(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
@@ -426,6 +453,7 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("release-sync-audit", readme)
         self.assertIn("examples/release-sync-audit-report.md", readme)
         self.assertIn("--candidate", readme)
+        self.assertIn("single token", readme)
         self.assertIn("release-sync-audit", workflow)
         self.assertIn("examples/release-sync-audit-report.md", workflow)
 
