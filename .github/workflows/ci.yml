@@ -64,3 +64,12 @@ jobs:
             --fail-on-missing \
             --output /tmp/agent-watchbench-release-index-audit-report.md
           diff -u examples/release-index-audit-report.md /tmp/agent-watchbench-release-index-audit-report.md
+
+      - name: Verify release sync audit report
+        run: |
+          python agent_watchbench.py release-sync-audit \
+            --root . \
+            --candidate 9cf57ed974903fbe210f392f73c6b6f1ac7f7895 \
+            --fail-on-stale \
+            --output /tmp/agent-watchbench-release-sync-audit-report.md
+          diff -u examples/release-sync-audit-report.md /tmp/agent-watchbench-release-sync-audit-report.md

@@ -388,6 +388,47 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("release-index-audit", workflow)
         self.assertIn("examples/release-index-audit-report.md", workflow)
 
+    def test_release_sync_audit_reports_stale_docs_without_copying_text(self):
+        report = agent_watchbench.release_sync_audit(
+            Path("."),
+            "9cf57ed974903fbe210f392f73c6b6f1ac7f7895",
+        ).to_markdown()
+
+        expected = (ROOT / "examples" / "release-sync-audit-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+        self.assertNotIn("Candidate is ready for a separate public-release decision", report)
+
+    def test_release_sync_audit_can_fail_on_stale_docs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            release_doc = root / "release.md"
+            release_doc.write_text("different candidate\n", encoding="utf-8")
+
+            status = agent_watchbench.main(
+                [
+                    "release-sync-audit",
+                    "--root",
+                    str(root),
+                    "--candidate",
+                    "synthetic-candidate-commit",
+                    "--release-doc",
+                    str(release_doc),
+                    "--fail-on-stale",
+                ]
+            )
+
+        self.assertEqual(status, 1)
+
+    def test_readme_and_ci_document_release_sync_audit_gate(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+        self.assertIn("release-sync-audit", readme)
+        self.assertIn("examples/release-sync-audit-report.md", readme)
+        self.assertIn("--candidate", readme)
+        self.assertIn("release-sync-audit", workflow)
+        self.assertIn("examples/release-sync-audit-report.md", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

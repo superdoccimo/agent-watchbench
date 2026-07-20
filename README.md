@@ -105,6 +105,15 @@ python3 agent_watchbench.py release-index-audit --root . --fail-on-missing --out
 diff -u examples/release-index-audit-report.md /tmp/agent-watchbench-release-index-audit.md
 ```
 
+Before a final release decision, a reviewer can also check that the selected
+candidate marker appears in the release-readiness index and the filled final
+candidate review without copying those documents into the report:
+
+```text
+python3 agent_watchbench.py release-sync-audit --root . --candidate 9cf57ed974903fbe210f392f73c6b6f1ac7f7895 --fail-on-stale --output /tmp/agent-watchbench-release-sync-audit.md
+diff -u examples/release-sync-audit-report.md /tmp/agent-watchbench-release-sync-audit.md
+```
+
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 

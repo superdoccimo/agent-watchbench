@@ -247,6 +247,39 @@ class ReleaseIndexAuditReport:
         return "\n".join(lines) + "\n"
 
 
+@dataclass(frozen=True)
+class ReleaseSyncAuditReport:
+    root: Path
+    candidate: str
+    files_checked: list[str]
+    stale_files: list[str]
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# Agent Watchbench Release Sync Audit",
+            "",
+            "## Summary",
+            f"- root: {self.root}",
+            f"- candidate marker length: {len(self.candidate)}",
+            f"- files checked: {len(self.files_checked)}",
+            f"- files missing candidate marker: {len(self.stale_files)}",
+            "- value policy: release document text is not copied into this report",
+            "",
+            "## Files Checked",
+        ]
+        if self.files_checked:
+            lines.extend(f"- {path}" for path in self.files_checked)
+        else:
+            lines.append("- none found")
+
+        lines.extend(["", "## Files Missing Candidate Marker"])
+        if self.stale_files:
+            lines.extend(f"- {path}" for path in self.stale_files)
+        else:
+            lines.append("- none found")
+        return "\n".join(lines) + "\n"
+
+
 def private_pr_packet_audit(root: Path, packet: Path | None = None) -> PrivatePrPacketAuditReport:
     packet_path = packet or root / "docs" / "private-pr-open-packet.md"
     if not packet_path.is_absolute():
@@ -276,6 +309,33 @@ def release_index_audit(root: Path, index: Path | None = None) -> ReleaseIndexAu
         index_path=index_path,
         markers_checked=len(RELEASE_INDEX_MARKERS),
         missing_markers=missing,
+    )
+
+
+def release_sync_audit(root: Path, candidate: str, files: Sequence[Path] | None = None) -> ReleaseSyncAuditReport:
+    default_files = (
+        Path("docs/release-readiness-index.md"),
+        Path("docs/final-candidate-review-2026-07-20.md"),
+    )
+    target_files = files or default_files
+    files_checked: list[str] = []
+    stale_files: list[str] = []
+    for target in target_files:
+        path = target if target.is_absolute() else root / target
+        rel_path = path.relative_to(root).as_posix() if path.is_relative_to(root) else path.as_posix()
+        files_checked.append(rel_path)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            stale_files.append(rel_path)
+            continue
+        if candidate not in text:
+            stale_files.append(rel_path)
+    return ReleaseSyncAuditReport(
+        root=root,
+        candidate=candidate,
+        files_checked=files_checked,
+        stale_files=stale_files,
     )
 
 
@@ -453,7 +513,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a local Agent Watchbench report.")
     parser.add_argument(
         "command",
-        choices=["scan", "secret-scan", "fixture-audit", "pr-packet-audit", "release-index-audit"],
+        choices=[
+            "scan",
+            "secret-scan",
+            "fixture-audit",
+            "pr-packet-audit",
+            "release-index-audit",
+            "release-sync-audit",
+        ],
     )
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--day")
@@ -469,6 +536,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Release-readiness index to audit. Defaults to docs/release-readiness-index.md under --root.",
     )
     parser.add_argument(
+        "--candidate",
+        help="Candidate commit or marker expected in release review documents.",
+    )
+    parser.add_argument(
+        "--release-doc",
+        type=Path,
+        action="append",
+        help="Release document to check for --candidate. May be repeated.",
+    )
+    parser.add_argument(
         "--fail-on-findings",
         action="store_true",
         help="Return a non-zero exit code when secret-scan finds possible secrets.",
@@ -477,6 +554,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--fail-on-missing",
         action="store_true",
         help="Return a non-zero exit code when pr-packet-audit finds missing markers.",
+    )
+    parser.add_argument(
+        "--fail-on-stale",
+        action="store_true",
+        help="Return a non-zero exit code when release-sync-audit finds stale documents.",
     )
     parser.add_argument(
         "--exclude-synthetic-fixtures",
@@ -505,6 +587,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         report = release_index_audit(args.root, args.index)
         write_report(report.to_markdown(), args.output)
         return 1 if args.fail_on_missing and report.missing_markers else 0
+    if args.command == "release-sync-audit":
+        if not args.candidate:
+            parser.error("--candidate is required for release-sync-audit")
+        report = release_sync_audit(args.root, args.candidate, args.release_doc)
+        write_report(report.to_markdown(), args.output)
+        return 1 if args.fail_on_stale and report.stale_files else 0
     raise AssertionError(args.command)
 
 
