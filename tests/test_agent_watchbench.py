@@ -360,6 +360,34 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("--fail-on-missing", readme)
         self.assertIn("examples/private-pr-packet-audit-report.md", readme)
 
+    def test_release_index_audit_reports_required_markers_without_copying_index(self):
+        report = agent_watchbench.release_index_audit(Path(".")).to_markdown()
+
+        expected = (ROOT / "examples" / "release-index-audit-report.md").read_text(encoding="utf-8")
+        self.assertEqual(report, expected)
+        self.assertNotIn("Stop and open a follow-up issue", report)
+
+    def test_release_index_audit_can_fail_on_missing_markers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            index = root / "release-index.md"
+            index.write_text("private candidate only\n", encoding="utf-8")
+
+            status = agent_watchbench.main(
+                ["release-index-audit", "--root", str(root), "--index", str(index), "--fail-on-missing"]
+            )
+
+        self.assertEqual(status, 1)
+
+    def test_readme_and_ci_document_release_index_audit_gate(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+        self.assertIn("release-index-audit", readme)
+        self.assertIn("examples/release-index-audit-report.md", readme)
+        self.assertIn("release-index-audit", workflow)
+        self.assertIn("examples/release-index-audit-report.md", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
