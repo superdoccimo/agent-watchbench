@@ -183,6 +183,19 @@ PR_PACKET_MARKERS = (
     ("real checkout secret scan", "--exclude-synthetic-fixtures --fail-on-findings"),
 )
 
+RELEASE_INDEX_MARKERS = (
+    ("public release gate link", "docs/public-release-gate.md"),
+    ("final candidate review link", "docs/final-candidate-review-2026-07-20.md"),
+    ("current candidate commit", "9cf57ed974903fbe210f392f73c6b6f1ac7f7895"),
+    ("current main ci run", "actions/runs/29710509162"),
+    ("private visibility boundary", "Repository visibility stays private"),
+    ("synthetic fixture evidence", "examples/fixture-report.md"),
+    ("secret scan evidence", "examples/secret-scan-report.md"),
+    ("fixture audit evidence", "examples/fixture-audit-report.md"),
+    ("release approval separation", "not release approval"),
+    ("stop conditions", "Stop and open a follow-up issue"),
+)
+
 
 @dataclass(frozen=True)
 class PrivatePrPacketAuditReport:
@@ -209,6 +222,31 @@ class PrivatePrPacketAuditReport:
         return "\n".join(lines) + "\n"
 
 
+@dataclass(frozen=True)
+class ReleaseIndexAuditReport:
+    index_path: Path
+    markers_checked: int
+    missing_markers: list[str]
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# Agent Watchbench Release Index Audit",
+            "",
+            "## Summary",
+            f"- index: {self.index_path}",
+            f"- markers checked: {self.markers_checked}",
+            f"- missing markers: {len(self.missing_markers)}",
+            "- value policy: release index text is not copied into this report",
+            "",
+            "## Missing Markers",
+        ]
+        if self.missing_markers:
+            lines.extend(f"- {marker}" for marker in self.missing_markers)
+        else:
+            lines.append("- none found")
+        return "\n".join(lines) + "\n"
+
+
 def private_pr_packet_audit(root: Path, packet: Path | None = None) -> PrivatePrPacketAuditReport:
     packet_path = packet or root / "docs" / "private-pr-open-packet.md"
     if not packet_path.is_absolute():
@@ -221,6 +259,22 @@ def private_pr_packet_audit(root: Path, packet: Path | None = None) -> PrivatePr
     return PrivatePrPacketAuditReport(
         packet_path=packet_path,
         markers_checked=len(PR_PACKET_MARKERS),
+        missing_markers=missing,
+    )
+
+
+def release_index_audit(root: Path, index: Path | None = None) -> ReleaseIndexAuditReport:
+    index_path = index or root / "docs" / "release-readiness-index.md"
+    if not index_path.is_absolute():
+        index_path = root / index_path
+    try:
+        text = index_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        text = ""
+    missing = [label for label, marker in RELEASE_INDEX_MARKERS if marker not in text]
+    return ReleaseIndexAuditReport(
+        index_path=index_path,
+        markers_checked=len(RELEASE_INDEX_MARKERS),
         missing_markers=missing,
     )
 
@@ -397,7 +451,10 @@ def write_report(markdown: str, output: Path | None) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a local Agent Watchbench report.")
-    parser.add_argument("command", choices=["scan", "secret-scan", "fixture-audit", "pr-packet-audit"])
+    parser.add_argument(
+        "command",
+        choices=["scan", "secret-scan", "fixture-audit", "pr-packet-audit", "release-index-audit"],
+    )
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--day")
     parser.add_argument("--output", type=Path, help="Write the Markdown report to a local file.")
@@ -405,6 +462,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--packet",
         type=Path,
         help="Private PR packet to audit. Defaults to docs/private-pr-open-packet.md under --root.",
+    )
+    parser.add_argument(
+        "--index",
+        type=Path,
+        help="Release-readiness index to audit. Defaults to docs/release-readiness-index.md under --root.",
     )
     parser.add_argument(
         "--fail-on-findings",
@@ -437,6 +499,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "pr-packet-audit":
         report = private_pr_packet_audit(args.root, args.packet)
+        write_report(report.to_markdown(), args.output)
+        return 1 if args.fail_on_missing and report.missing_markers else 0
+    if args.command == "release-index-audit":
+        report = release_index_audit(args.root, args.index)
         write_report(report.to_markdown(), args.output)
         return 1 if args.fail_on_missing and report.missing_markers else 0
     raise AssertionError(args.command)

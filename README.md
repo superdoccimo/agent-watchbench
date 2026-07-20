@@ -96,6 +96,15 @@ python3 agent_watchbench.py pr-packet-audit --root . --fail-on-missing --output 
 diff -u examples/private-pr-packet-audit-report.md /tmp/agent-watchbench-pr-packet-audit.md
 ```
 
+The release-readiness index can also be audited without copying release notes
+into the report. This checks that the index still links the final candidate,
+CI run, fixture evidence, stop conditions, and release-approval separation:
+
+```text
+python3 agent_watchbench.py release-index-audit --root . --fail-on-missing --output /tmp/agent-watchbench-release-index-audit.md
+diff -u examples/release-index-audit-report.md /tmp/agent-watchbench-release-index-audit.md
+```
+
 The prototype safety boundary is recorded in `SAFETY.md`.
 Artifact origin and review evidence are recorded in `PROVENANCE.md`.
 

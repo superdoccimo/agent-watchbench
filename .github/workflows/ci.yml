@@ -56,3 +56,11 @@ jobs:
             --root . \
             --output /tmp/agent-watchbench-fixture-audit-report.md
           diff -u examples/fixture-audit-report.md /tmp/agent-watchbench-fixture-audit-report.md
+
+      - name: Verify release index audit report
+        run: |
+          python agent_watchbench.py release-index-audit \
+            --root . \
+            --fail-on-missing \
+            --output /tmp/agent-watchbench-release-index-audit-report.md
+          diff -u examples/release-index-audit-report.md /tmp/agent-watchbench-release-index-audit-report.md
