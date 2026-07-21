@@ -134,6 +134,14 @@ containing the exact current HEAD and its observed CI run, then points
 `release-sync-audit` at that packet. The generated audit is evidence, not
 approval.
 
+## Deferred branch freshness
+
+Before pushing or opening a PR from a branch that was held locally during a
+quiet window, run the checklist in
+`docs/deferred-branch-freshness.md`. It compares the branch against current
+`origin/main`, flags empty or already-equivalent patches, and catches branches
+that need a local rebase before review.
+
 ## Safety and limitations
 
 - Local files are the only application inputs; the program contains no network
