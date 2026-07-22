@@ -131,6 +131,30 @@ class AgentWatchbenchTests(unittest.TestCase):
             self.assertTrue(output.exists())
             self.assertEqual(before, {path: digest(path) for path in inputs})
 
+    def test_rank_projects_command_reports_ranked_ideas_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.populate_scan_root(root)
+            output = root / "local-reports" / "rank-projects.md"
+
+            status = agent_watchbench.main(["rank-projects", "--root", str(root), "--output", str(output)])
+            report = output.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 0)
+        self.assertIn("# Agent Watchbench Project Ranking", report)
+        self.assertIn("- ranked project ideas: 2", report)
+        self.assertIn("- Agent Watchbench [prototype]: read-only scan report", report)
+        self.assertIn("- Rough Note [idea]: not recorded", report)
+        self.assertIn("## Missing Evidence Warnings\n- none found", report)
+        self.assertNotIn("Learning Signals", report)
+
+    def test_rank_projects_missing_ideas_keeps_warning_visible(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report = agent_watchbench.build_project_rank_report(Path(tmp)).to_markdown()
+
+        self.assertIn("- ranked project ideas: 0", report)
+        self.assertIn("projects/ideas.jsonl: missing", report)
+
     def test_output_overwrite_requires_force(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -506,6 +530,9 @@ class AgentWatchbenchTests(unittest.TestCase):
             ROOT / "examples" / "fixture-report.md": agent_watchbench.build_report(
                 ROOT / "examples" / "fixture-root", "2099-01-02"
             ).to_markdown(),
+            ROOT / "examples" / "project-ranking-report.md": agent_watchbench.build_project_rank_report(
+                ROOT / "examples" / "fixture-root"
+            ).to_markdown(),
             ROOT / "examples" / "secret-scan-report.md": agent_watchbench.secret_scan(
                 ROOT / "examples" / "secret-scan-root"
             ).to_markdown(),
@@ -574,7 +601,8 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("learning/reviews/YYYY-MM-DD.md", readme)
         self.assertIn("projects/ideas.jsonl", readme)
         self.assertIn("Future work", readme)
-        self.assertIn("not implemented as standalone", readme)
+        self.assertIn("check-boundaries", readme)
+        self.assertIn("not implemented as a standalone command", readme)
         self.assertIn("local-reports/", readme)
         self.assertNotIn("/home/ubuntu/security-guard", readme)
         self.assertIn("does not provide a sandbox", readme)
@@ -632,6 +660,7 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertIn("private-pr-packet-audit", workflow)
         self.assertIn("release-index-audit", workflow)
         self.assertIn("release-sync-audit", workflow)
+        self.assertIn("rank-projects", workflow)
         self.assertIn("--exclude-synthetic-fixtures", workflow)
         self.assertNotIn("pull_request_target", workflow)
 

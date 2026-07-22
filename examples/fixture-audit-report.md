@@ -2,9 +2,9 @@
 
 ## Summary
 - root: <ROOT>
-- files checked: 16
+- files checked: 17
 - files with synthetic marker: 10
-- files needing boundary review: 13
+- files needing boundary review: 14
 - files with private-data blockers: 0
 - scan errors: 0
 - audit scope: examples/ and tests/fixtures/ only
@@ -15,6 +15,7 @@
 - examples/fixture-root/learning/reviews/2099-01-02.md: synthetic marker present; no boundary terms; no private-data blockers
 - examples/fixture-root/projects/ideas.jsonl: synthetic marker missing; secret, token; no private-data blockers
 - examples/private-pr-packet-audit-report.md: synthetic marker missing; no boundary terms; no private-data blockers
+- examples/project-ranking-report.md: synthetic marker missing; no boundary terms; no private-data blockers
 - examples/release-index-audit-report.md: synthetic marker missing; no boundary terms; no private-data blockers
 - examples/release-sync-audit-report.md: synthetic marker missing; no boundary terms; no private-data blockers
 - examples/release-sync-root/candidate-review.md: synthetic marker present; no boundary terms; no private-data blockers

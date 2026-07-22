@@ -173,6 +173,41 @@ class WatchbenchReport:
 
 
 @dataclass(frozen=True)
+class ProjectRankReport:
+    project_ideas: list[dict]
+    missing_evidence: list[str]
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# Agent Watchbench Project Ranking",
+            "",
+            "## Summary",
+            f"- ranked project ideas: {len(self.project_ideas)}",
+            f"- missing-evidence warnings: {len(self.missing_evidence)}",
+            "- ranking heuristic: status, recorded first step, and safety boundary metadata",
+            "",
+            "## Project Ideas",
+        ]
+        if self.project_ideas:
+            for idea in self.project_ideas:
+                title = sanitize_report_text(idea.get("title") or idea.get("project_id") or "untitled")
+                status_value = sanitize_report_text(idea.get("status") or "unknown")
+                first_step = sanitize_report_text(
+                    idea.get("first_prototype") or idea.get("first_step") or "not recorded"
+                )
+                lines.append(f"- {title} [{status_value}]: {first_step}")
+        else:
+            lines.append("- none found")
+
+        lines.extend(["", "## Missing Evidence Warnings"])
+        if self.missing_evidence:
+            lines.extend(f"- {sanitize_report_text(warning)}" for warning in self.missing_evidence)
+        else:
+            lines.append("- none found")
+        return "\n".join(lines) + "\n"
+
+
+@dataclass(frozen=True)
 class SecretFinding:
     path: str
     line: int
@@ -657,6 +692,16 @@ def build_report(root: Path, day: str) -> WatchbenchReport:
     )
 
 
+def build_project_rank_report(root: Path) -> ProjectRankReport:
+    root = validate_root(root)
+    ideas_path = confined_path(root, None, Path("projects") / "ideas.jsonl")
+    ideas_raw, idea_warnings = read_jsonl(ideas_path, root)
+    return ProjectRankReport(
+        project_ideas=rank_project_ideas(ideas_raw)[:5],
+        missing_evidence=idea_warnings,
+    )
+
+
 def secret_findings_for_line(line: str) -> list[str]:
     kinds = {kind for kind, pattern in PROVIDER_SECRET_PATTERNS if pattern.search(line)}
     assignment = ASSIGNMENT_RE.search(line)
@@ -890,6 +935,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "command",
         choices=[
             "scan",
+            "rank-projects",
             "secret-scan",
             "fixture-audit",
             "pr-packet-audit",
@@ -948,6 +994,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 parser.error("--day is required for scan")
             report_text = build_report(root, args.day).to_markdown()
             write_report(report_text, output, args.force)
+            return 0
+        if args.command == "rank-projects":
+            report = build_project_rank_report(root)
+            write_report(report.to_markdown(), output, args.force)
             return 0
         if args.command == "secret-scan":
             report = secret_scan(
