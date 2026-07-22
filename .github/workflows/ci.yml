@@ -57,6 +57,11 @@ jobs:
               Args = @("scan", "--root", "examples/fixture-root", "--day", "2099-01-02")
             },
             @{
+              Name = "project-ranking-report"
+              Expected = "examples/project-ranking-report.md"
+              Args = @("rank-projects", "--root", "examples/fixture-root")
+            },
+            @{
               Name = "secret-scan-report"
               Expected = "examples/secret-scan-report.md"
               Args = @("secret-scan", "--root", "examples/secret-scan-root")

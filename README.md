@@ -84,11 +84,20 @@ python3 agent_watchbench.py scan --root ./examples/fixture-root --day 2099-01-02
 diff -u examples/fixture-report.md <TEMP_DIR>/fixture-report.md
 ```
 
+For a project-only review, `rank-projects` reads `projects/ideas.jsonl` and
+emits the ranked idea section without requiring a daily learning review:
+
+```text
+python3 agent_watchbench.py rank-projects --root ./examples/fixture-root --output <TEMP_DIR>/project-ranking-report.md
+diff -u examples/project-ranking-report.md <TEMP_DIR>/project-ranking-report.md
+```
+
 ## Audit commands
 
 The implemented CLI commands are:
 
 - `scan`
+- `rank-projects`
 - `secret-scan`
 - `fixture-audit`
 - `pr-packet-audit`
@@ -182,6 +191,6 @@ change, package publish, release, deployment, or external post.
 ## Future work
 
 Possible future inputs include lessons, rule candidates, intel notes, paper
-notes, daily logs, and review queues. Possible standalone commands include
-`rank-projects` and `check-boundaries`. They are not implemented as standalone
-commands in the current prototype.
+notes, daily logs, and review queues. `check-boundaries` is a possible future
+standalone command; it is not implemented as a standalone command in the
+current prototype.
