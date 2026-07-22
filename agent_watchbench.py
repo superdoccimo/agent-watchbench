@@ -53,7 +53,9 @@ SKIP_DIRS = {
     "dist",
     "node_modules",
     "venv",
+    ".eggs",
 }
+SKIP_DIR_SUFFIXES = (".egg-info", ".dist-info")
 SYNTHETIC_SECRET_FIXTURE_DIRS = (
     ("examples", "secret-scan-root"),
     ("tests", "fixtures", "secret-scan-root"),
@@ -539,7 +541,7 @@ def iter_candidate_files(root: Path) -> tuple[list[Path], list[ScanError]]:
                     errors.append(ScanError(label, "symlink"))
                     continue
                 if path.is_dir():
-                    if path.name not in SKIP_DIRS:
+                    if path.name not in SKIP_DIRS and not path.name.endswith(SKIP_DIR_SUFFIXES):
                         pending.append(path)
                     continue
                 if path.is_file():

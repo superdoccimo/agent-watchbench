@@ -354,7 +354,15 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertEqual(report.findings[0].path, ".env")
 
     def test_secret_scan_skips_generated_dependency_and_build_directories(self):
-        skipped_dirs = ("node_modules", "dist", "build", ".tox")
+        skipped_dirs = (
+            "node_modules",
+            "dist",
+            "build",
+            ".tox",
+            ".eggs",
+            "package.egg-info",
+            "package.dist-info",
+        )
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "src").mkdir()
