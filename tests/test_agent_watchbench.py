@@ -353,6 +353,23 @@ class AgentWatchbenchTests(unittest.TestCase):
         self.assertEqual(report.files_checked, 1)
         self.assertEqual(report.findings[0].path, ".env")
 
+    def test_secret_scan_skips_generated_dependency_and_build_directories(self):
+        skipped_dirs = ("node_modules", "dist", "build", ".tox")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "clean.txt").write_text("synthetic clean fixture\n", encoding="utf-8")
+            for dirname in skipped_dirs:
+                generated = root / dirname
+                generated.mkdir()
+                (generated / ".env").write_text("SERVICE_" + "TOKEN=" + "x" * 20 + "\n", encoding="utf-8")
+
+            report = agent_watchbench.secret_scan(root)
+
+        self.assertEqual(report.files_checked, 1)
+        self.assertEqual(report.findings, [])
+        self.assertEqual(report.scan_errors, [])
+
     def test_secret_scan_fail_on_findings_and_clean_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
