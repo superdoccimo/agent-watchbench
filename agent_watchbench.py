@@ -40,7 +40,20 @@ PRIVATE_FIXTURE_BLOCKERS = (
     "cookie",
     "credential",
 )
-SKIP_DIRS = {".git", ".hg", ".svn", "__pycache__", ".mypy_cache", ".pytest_cache", ".venv", "venv"}
+SKIP_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+}
 SYNTHETIC_SECRET_FIXTURE_DIRS = (
     ("examples", "secret-scan-root"),
     ("tests", "fixtures", "secret-scan-root"),
